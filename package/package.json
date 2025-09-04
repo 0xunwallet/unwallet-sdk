@@ -1,7 +1,7 @@
 {
-  "name": "unwallet-sdk",
+  "name": "unwallet",
   "version": "0.1.0",
-  "description": "TypeScript SDK boilerplate",
+  "description": "Unwallet TypeScript SDK",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,6 +15,24 @@
     "prepare": "pnpm build",
     "lint": "eslint . --ext .ts",
     "format": "prettier -w ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xunwallet/unwallet-sdk.git"
+  },
+  "homepage": "https://github.com/0xunwallet/unwallet-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/0xunwallet/unwallet-sdk/issues"
+  },
+  "keywords": [
+    "unwallet",
+    "sdk",
+    "stealth",
+    "payments",
+    "crypto"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "7",
