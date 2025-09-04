@@ -1,0 +1,25 @@
+# Node
+node_modules
+.npmrc
+.pnpm-store
+
+# Build outputs
+dist
+coverage
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env
+.env
+.env.*
+
+# OS
+.DS_Store
+
+# IDE
+.vscode
+.idea
