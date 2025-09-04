@@ -6,6 +6,10 @@
   "scripts": {
     "build": "pnpm -C package build",
     "test": "pnpm -C test test",
-    "build-and-test": "pnpm -C package build && pnpm -C test install && pnpm -C test test"
+    "build-and-test": "pnpm -C package build && pnpm -C test install && pnpm -C test test",
+    "format:all": "prettier -w ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
   }
 }
