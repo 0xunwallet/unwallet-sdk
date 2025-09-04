@@ -1,4 +1,4 @@
-import { createStealthAddress } from 'unwallet-sdk';
+import { createStealthAddress } from "unwallet-sdk";
 
 // generate stealth address for base sepolia
 createStealthAddress({
