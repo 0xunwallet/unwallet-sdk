@@ -1,4 +1,5 @@
-import { baseSepolia } from 'viem/chains';
+import { baseSepolia, Chain } from 'viem/chains';
+import { type SupportedChain } from '../types/supported-chains';
 
 export const BASE_SEPOLIA = {
   name: 'Base Sepolia',
@@ -31,4 +32,53 @@ export const BASE_SEPOLIA = {
 
 export const CHAIN_MAPPING = {
   84532: BASE_SEPOLIA,
+};
+
+export const RPC_CONFIG = {
+  // SEI_TESTNET: {
+  //   primary:
+  //     'https://quiet-crimson-ensemble.sei-atlantic.quiknode.pro/69718db72dcf9d1828053e82dbeeeb283319782e/',
+  //   fallbacks: [
+  //     'https://sei-testnet.drpc.org',
+  //     'https://rpc.sei-testnet.seinetwork.io',
+  //     'https://testnet-rpc.sei.io',
+  //   ],
+  // },
+  BASE_SEPOLIA: {
+    primary: 'https://sepolia.base.org',
+    fallbacks: [
+      'https://base-sepolia.api.onfinality.io/public',
+      'https://base-sepolia-public.nodies.app',
+    ],
+  },
+} as const;
+
+export const getViemChainById = (chainId: SupportedChain): Chain | undefined => {
+  const chainConfig = CHAIN_MAPPING[chainId];
+
+  if (!chainConfig) {
+    return undefined;
+  }
+
+  return {
+    id: chainConfig.chainId,
+    name: chainConfig.name,
+    network: chainConfig.network,
+    nativeCurrency: chainConfig.nativeCurrency,
+    rpcUrls: {
+      default: {
+        http: [chainConfig.rpcUrl],
+      },
+      public: {
+        http: [chainConfig.rpcUrl],
+      },
+    },
+    blockExplorers: {
+      default: {
+        name: chainConfig.blockExplorer.name,
+        url: chainConfig.blockExplorer.url,
+      },
+    },
+    testnet: chainConfig.testnet,
+  } as Chain;
 };
