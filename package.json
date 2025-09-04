@@ -1,9 +1,11 @@
 {
   "name": "unwallet-sdk-root",
   "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10",
   "scripts": {
-    "build": "(cd /Users/viveksahu/Documents/unwallet/sdk/package && pnpm build)",
-    "test": "(cd /Users/viveksahu/Documents/unwallet/sdk/test && pnpm test)",
-    "build-and-test": "pnpm run build && pnpm run test"
+    "build": "pnpm -C package build",
+    "test": "pnpm -C test test",
+    "build-and-test": "pnpm -C package build && pnpm -C test install && pnpm -C test test"
   }
 }
