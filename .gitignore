@@ -23,3 +23,6 @@ pnpm-debug.log*
 # IDE
 .vscode
 .idea
+# Ignore node modules
+node_modules/
+**/node_modules/
