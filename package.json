@@ -1,0 +1,9 @@
+{
+  "name": "unwallet-sdk-root",
+  "private": true,
+  "scripts": {
+    "build": "(cd /Users/viveksahu/Documents/unwallet/sdk/package && pnpm build)",
+    "test": "(cd /Users/viveksahu/Documents/unwallet/sdk/test && pnpm test)",
+    "build-and-test": "pnpm run build && pnpm run test"
+  }
+}
