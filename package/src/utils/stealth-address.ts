@@ -25,7 +25,6 @@ export const getStealthAddress = async (
       dnt: '1',
     };
 
-    console.log('backend url: ', `${BACKEND_URL}/api/user/${username}/stealth`);
     const stealthResponse = await axios.post(
       `${BACKEND_URL}/api/user/${username}/stealth`,
       {

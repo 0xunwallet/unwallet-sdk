@@ -1,19 +1,19 @@
 module.exports = {
   root: true,
-  parser: '@typescript-eslint/parser',
+  parser: "@typescript-eslint/parser",
   parserOptions: {
     project: null,
-    sourceType: 'module',
+    sourceType: "module",
   },
   env: { node: true, es2021: true },
-  plugins: ['@typescript-eslint', 'prettier'],
+  plugins: ["@typescript-eslint", "prettier"],
   extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:prettier/recommended',
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:prettier/recommended",
   ],
   rules: {
-    'prettier/prettier': 'error',
+    "prettier/prettier": "error",
   },
-  ignorePatterns: ['node_modules'],
+  ignorePatterns: ["node_modules"],
 };
