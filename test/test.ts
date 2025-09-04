@@ -1,4 +1,12 @@
-import { createPublicClient, createWalletClient, type PublicClient, type WalletClient } from "viem";
+import { createStealthAddress, processOnePayment } from "unwallet-sdk";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  type PublicClient,
+  type WalletClient,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 
 // generate stealth address for base sepolia
@@ -17,10 +25,12 @@ const account = privateKeyToAccount(privateKey);
 const walletClient = createWalletClient({
   account,
   chain: baseSepolia,
+  transport: http(),
 });
 
 const publicClient = createPublicClient({
   chain: baseSepolia,
+  transport: http(),
 });
 
 processOnePayment({
