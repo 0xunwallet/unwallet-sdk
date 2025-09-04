@@ -28,6 +28,8 @@
     "typescript": "5.5.4"
   },
   "dependencies": {
+    "@fluidkey/stealth-account-kit": "^1.1.0",
+    "@safe-global/protocol-kit": "^6.1.1",
     "axios": "^1.11.0",
     "viem": "^2.37.3"
   }

@@ -17,7 +17,8 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "unwallet-sdk": "link:../package"
+    "unwallet-sdk": "link:../package",
+    "viem": "^2.37.3"
   },
   "type": "module"
 }
