@@ -47,8 +47,7 @@ import { baseSepolia } from "viem/chains";
 //   }
 // ]
 
-const privateKey =
-  "YOUR_PRIVATE_KEY";
+const privateKey = "0xPrivateKey";
 const account = privateKeyToAccount(privateKey);
 
 const walletClient = createWalletClient({
@@ -63,14 +62,14 @@ const publicClient = createPublicClient({
 });
 
 processOnePayment({
-  nonce: 4,
   walletClient: walletClient as WalletClient,
   publicClient: publicClient as PublicClient,
-  username: "kyskkysk",
   chainId: 84532,
+  username: "kyskkysk",
   tokenAddress: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
-  amount: "0.5",
+  amount: "1",
   decimals: 6,
   token: "USDC",
+  nonce: 3,
   recipientAddress: "0xc6377415Ee98A7b71161Ee963603eE52fF7750FC",
 }).then((address) => console.log("address", address));
