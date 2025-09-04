@@ -1,22 +1,40 @@
-import { processOnePayment } from "unwallet-sdk";
-import { privateKeyToAccount } from "viem/accounts";
-import {
-  createPublicClient,
-  createWalletClient,
-  http,
-  type PublicClient,
-  type WalletClient,
-} from "viem";
+import { createPublicClient, createWalletClient, type PublicClient, type WalletClient } from "viem";
 import { baseSepolia } from "viem/chains";
 
 // generate stealth address for base sepolia
-// createStealthAddress({
-//   username: "kyskkysk",
-//   chainId: 84532,
-//   tokenAddress: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
-// }).then((address) => {
-//   console.log(address);
-// });
+createStealthAddress({
+  username: "kyskkysk",
+  chainId: 84532,
+  tokenAddress: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+}).then((address) => {
+  console.log(address);
+});
+
+// payment flow
+const privateKey = "0xPrivateKey";
+const account = privateKeyToAccount(privateKey);
+
+const walletClient = createWalletClient({
+  account,
+  chain: baseSepolia,
+});
+
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+});
+
+processOnePayment({
+  walletClient: walletClient as WalletClient,
+  publicClient: publicClient as PublicClient,
+  chainId: 84532,
+  username: "kyskkysk",
+  tokenAddress: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+  amount: "1",
+  decimals: 6,
+  token: "USDC",
+  nonce: 3,
+  recipientAddress: "0xc6377415Ee98A7b71161Ee963603eE52fF7750FC",
+}).then((address) => console.log("address", address));
 
 // [
 //   {
@@ -46,30 +64,3 @@ import { baseSepolia } from "viem/chains";
 //       "isFunded": true
 //   }
 // ]
-
-const privateKey = "0xPrivateKey";
-const account = privateKeyToAccount(privateKey);
-
-const walletClient = createWalletClient({
-  account,
-  chain: baseSepolia,
-  transport: http(),
-});
-
-const publicClient = createPublicClient({
-  chain: baseSepolia,
-  transport: http(),
-});
-
-processOnePayment({
-  walletClient: walletClient as WalletClient,
-  publicClient: publicClient as PublicClient,
-  chainId: 84532,
-  username: "kyskkysk",
-  tokenAddress: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
-  amount: "1",
-  decimals: 6,
-  token: "USDC",
-  nonce: 3,
-  recipientAddress: "0xc6377415Ee98A7b71161Ee963603eE52fF7750FC",
-}).then((address) => console.log("address", address));
