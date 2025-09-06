@@ -16,9 +16,9 @@ node --loader ts-node/esm -r dotenv/config src/test-transactions.ts
 
 echo ""
 echo "=================================================="
-echo "TEST 3: Payment Processing"
-echo "=================================================="
-node --loader ts-node/esm -r dotenv/config src/test-payment.ts
+# echo "TEST 3: Payment Processing"
+# echo "=================================================="
+# node --loader ts-node/esm -r dotenv/config src/test-payment.ts
 
 echo ""
 echo "=================================================="

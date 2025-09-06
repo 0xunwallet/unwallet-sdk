@@ -1,0 +1,115 @@
+name: Publish Package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for proper version detection
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Check if version should be bumped
+        id: version-check
+        run: |
+          # Get the latest commit message
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+
+          # Check if commit message contains version bump indicators
+          if [[ "$COMMIT_MSG" =~ (major|minor|patch|feat|fix|breaking) ]]; then
+            echo "should-bump=true" >> $GITHUB_OUTPUT
+            
+            # Determine bump type based on commit message
+            if [[ "$COMMIT_MSG" =~ (major|breaking) ]]; then
+              echo "bump-type=major" >> $GITHUB_OUTPUT
+            elif [[ "$COMMIT_MSG" =~ (feat|minor) ]]; then
+              echo "bump-type=minor" >> $GITHUB_OUTPUT
+            else
+              echo "bump-type=patch" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should-bump=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        if: steps.version-check.outputs.should-bump == 'true'
+        run: |
+          cd package
+          npm version ${{ steps.version-check.outputs.bump-type }} --no-git-tag-version
+          echo "NEW_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Check if package should be published
+        id: publish-check
+        run: |
+          cd package
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+
+          # Check if this version already exists on npm
+          if npm view unwallet@$CURRENT_VERSION version > /dev/null 2>&1; then
+            echo "Version $CURRENT_VERSION already exists on npm"
+            echo "should-publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "should-publish=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to npm
+        if: steps.publish-check.outputs.should-publish == 'true'
+        run: |
+          cd package
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create Git tag
+        if: steps.publish-check.outputs.should-publish == 'true'
+        run: |
+          cd package
+          VERSION=$(node -p "require('./package.json').version")
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add package.json
+          git commit -m "chore: bump version to $VERSION" || exit 0
+          git tag "v$VERSION"
+          git push origin main
+          git push origin "v$VERSION"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

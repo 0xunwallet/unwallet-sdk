@@ -7,7 +7,12 @@
     "build": "pnpm -C package build",
     "test": "pnpm -C test test",
     "build-and-test": "pnpm -C package build && pnpm -C test install && pnpm -C test test",
-    "format:all": "prettier -w ."
+    "format:all": "prettier -w .",
+    "version:patch": "pnpm -C package version patch",
+    "version:minor": "pnpm -C package version minor",
+    "version:major": "pnpm -C package version major",
+    "publish:package": "pnpm -C package publish",
+    "ci": "pnpm install --frozen-lockfile && pnpm build && pnpm test"
   },
   "devDependencies": {
     "prettier": "^3.6.2"
