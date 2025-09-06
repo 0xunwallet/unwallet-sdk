@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { processOnePayment } from "unwallet-sdk";
+import { processSinglePayment } from "unwallet-sdk";
 import { createPublicClient, createWalletClient, http, type PublicClient, type WalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
@@ -21,16 +21,6 @@ export const testProcessOnePayment = async () => {
       throw new Error("PRIVATE_KEY environment variable is required");
     }
 
-    console.log("📋 Test parameters:", {
-      username,
-      tokenAddress,
-      recipientAddress,
-      amount: "1",
-      decimals: 6,
-      token: "USDC",
-      nonce: 3,
-    });
-
     const account = privateKeyToAccount(privateKey as `0x${string}`);
 
     const walletClient = createWalletClient({
@@ -41,19 +31,16 @@ export const testProcessOnePayment = async () => {
 
     const publicClient = createPublicClient({
       chain: baseSepolia,
-      transport: http(),
+      transport: http("https://sepolia.base.org"),
     });
 
-    const result = await processOnePayment({
+    const result = await processSinglePayment({
       walletClient: walletClient as WalletClient,
       publicClient: publicClient as PublicClient,
       chainId: 84532, // Base Sepolia
       username,
       tokenAddress,
       amount: "1",
-      decimals: 6,
-      token: "USDC",
-      nonce: 3,
       recipientAddress,
     });
 

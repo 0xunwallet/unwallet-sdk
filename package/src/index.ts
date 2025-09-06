@@ -1,10 +1,11 @@
 import { CHAIN_MAPPING } from './utils/chains-constants';
 import { type SupportedChain } from './types/supported-chains';
-import { getStealthAddress, processSingleRedemptionWithSponsorship } from './utils/stealth-address';
-import { type RedemptionResult } from './types/redemption-result';
+import { getStealthAddress } from './utils/stealth-address';
 import { getTransactions as fetchTransactions } from './utils/transaction-utils';
 import { type TransactionResult } from './types/withdrawal-data';
 import { PublicClient, WalletClient } from 'viem';
+import { singlePayment } from './utils/payment-utils';
+import { type SinglePaymentResult } from './types/payments';
 
 export const createStealthAddress = async ({
   username,
@@ -24,47 +25,6 @@ export const createStealthAddress = async ({
   return address;
 };
 
-export const processOnePayment = async ({
-  walletClient,
-  publicClient,
-  chainId,
-  username,
-  tokenAddress,
-  amount,
-  decimals,
-  token,
-  nonce,
-  recipientAddress,
-}: {
-  walletClient: WalletClient;
-  publicClient: PublicClient;
-  username: string;
-  chainId: SupportedChain;
-  tokenAddress: string;
-  amount: string;
-  decimals: number;
-  token: string;
-  nonce: number;
-  recipientAddress: string;
-}): Promise<RedemptionResult> => {
-  const payment = {
-    username,
-    tokenAddress,
-    amount,
-    decimals,
-    token,
-    recipientAddress,
-  };
-  const address = await processSingleRedemptionWithSponsorship(
-    nonce,
-    chainId,
-    walletClient,
-    publicClient,
-    payment,
-  );
-  return address;
-};
-
 export const getTransactions = async ({
   username,
   publicClient,
@@ -73,4 +33,36 @@ export const getTransactions = async ({
   publicClient: PublicClient;
 }): Promise<TransactionResult> => {
   return await fetchTransactions({ username, publicClient });
+};
+
+export const processSinglePayment = async ({
+  username,
+  walletClient,
+  publicClient,
+  chainId,
+  tokenAddress,
+  amount,
+  recipientAddress,
+  nonce,
+}: {
+  username: string;
+  walletClient: WalletClient;
+  publicClient: PublicClient;
+  chainId: SupportedChain;
+  tokenAddress: string;
+  amount: string;
+  recipientAddress: string;
+  nonce: number;
+}): Promise<SinglePaymentResult> => {
+  const result = await singlePayment({
+    username,
+    walletClient,
+    publicClient,
+    chainId,
+    tokenAddress,
+    amount,
+    recipientAddress,
+    nonce,
+  });
+  return result;
 };

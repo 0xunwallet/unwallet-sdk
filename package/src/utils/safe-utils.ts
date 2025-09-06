@@ -1,5 +1,7 @@
 import Safe from '@safe-global/protocol-kit';
-import { RPC_CONFIG } from './chains-constants';
+import { getViemChainById, RPC_CONFIG } from './chains-constants';
+import { BACKEND_URL } from './constants';
+import { SupportedChain } from '../types/supported-chains';
 
 // Helper function to build Safe transaction
 export const buildSafeTransaction = (txData: {
@@ -155,3 +157,78 @@ export async function predictSafeAddress(stealthAddress: string, rpcUrl?: string
     );
   }
 }
+
+export const executeTransactionWithGasSponsorship = async (
+  multicallData: Array<{
+    target: string;
+    allowFailure: boolean;
+    callData: string;
+  }>,
+  metadata: Record<string, unknown> = {},
+  username: string,
+  chainId: SupportedChain,
+) => {
+  try {
+    console.log('🌟 Requesting gas sponsorship for transaction...');
+
+    // Make request to gas sponsorship endpoint
+    const response = await fetch(`${BACKEND_URL}/api/user/${username}/gas-sponsorship`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        multicallData,
+        metadata: {
+          ...metadata,
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString(),
+          requestId: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        },
+        chainId: chainId,
+      }),
+    });
+
+    const result = await response.json();
+    console.log('📄 Backend response:', result);
+
+    if (!response.ok) {
+      throw new Error(result.message || result.error || 'Gas sponsorship request failed');
+    }
+
+    if (!result.success) {
+      throw new Error(result.message || 'Gas sponsorship service returned failure');
+    }
+
+    console.log('✅ Gas sponsored transaction completed successfully!');
+    console.log('📊 Transaction details:', result);
+
+    const currentNetwork = getViemChainById(chainId);
+    const explorer = currentNetwork?.blockExplorers?.default?.url;
+    const txHash = result.data?.transactionHash || 'pending';
+    const explorerUrl = `${explorer}/tx/${txHash}`;
+
+    return {
+      success: true,
+      txHash: txHash,
+      blockNumber: result.data?.blockNumber || 0,
+      gasUsed: result.data?.gasUsed || 'N/A',
+      gasCost: result.data?.gasCost || 'N/A',
+      explorerUrl: explorerUrl,
+      receipt: {
+        status: 'success',
+        transactionHash: txHash,
+        blockNumber: BigInt(result.data?.blockNumber || 0),
+        gasUsed: BigInt(result.data?.gasUsed || 0),
+      },
+      sponsorDetails: {
+        sponsorAddress: result.data?.sponsorAddress || 'Unknown',
+        chainName: result.data?.executionDetails?.chainName,
+      },
+    };
+  } catch (error) {
+    console.error('❌ Gas sponsorship request failed:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Gas sponsorship failed: ${errorMessage}`);
+  }
+};
