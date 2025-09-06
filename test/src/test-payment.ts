@@ -4,10 +4,8 @@ import { createPublicClient, createWalletClient, http, type PublicClient, type W
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
 
-// Load environment variables
 dotenv.config();
 
-// Test payment processing function
 export const testProcessOnePayment = async () => {
   try {
     console.log("🔍 Testing processOnePayment function...");
@@ -39,9 +37,8 @@ export const testProcessOnePayment = async () => {
       publicClient: publicClient as PublicClient,
       chainId: 84532, // Base Sepolia
       username,
-      nonce: 8,
       tokenAddress,
-      amount: "1",
+      requestedAmount: "1",
       recipientAddress,
     });
 

@@ -1,9 +1,7 @@
 import dotenv from "dotenv";
 
-// Load environment variables
 dotenv.config();
 
-// Test runner for all SDK functions
 const runAllTests = async () => {
   console.log("🚀 Starting Unwallet SDK Tests...\n");
 
@@ -11,7 +9,7 @@ const runAllTests = async () => {
     // Import all test functions
     const { testCreateStealthAddress } = await import("./test-stealth-address.js");
     const { testGetTransactions } = await import("./test-transactions.js");
-    // const { testProcessOnePayment } = await import("./test-payment.js");
+    const { testProcessOnePayment } = await import("./test-payment.js");
 
     // Test 1: Stealth Address Generation
     console.log("=".repeat(50));
@@ -19,15 +17,17 @@ const runAllTests = async () => {
     console.log("=".repeat(50));
     await testCreateStealthAddress();
 
+    // Test 2: Transaction Data Fetching
     console.log("\n" + "=".repeat(50));
     console.log("TEST 2: Transaction Data Fetching");
     console.log("=".repeat(50));
     await testGetTransactions();
 
+    // Test 3: Payment Processing
     console.log("\n" + "=".repeat(50));
-    // console.log("TEST 3: Payment Processing");
-    // console.log("=".repeat(50));
-    // await testProcessOnePayment();
+    console.log("TEST 3: Payment Processing");
+    console.log("=".repeat(50));
+    await testProcessOnePayment();
 
     console.log("\n" + "=".repeat(50));
     console.log("✅ All tests completed!");

@@ -1,5 +1,6 @@
 import { baseSepolia, Chain } from 'viem/chains';
 import { type SupportedChain } from '../types/supported-chains';
+import { createPublicClient, http, PublicClient } from 'viem';
 
 export const BASE_SEPOLIA = {
   name: 'Base Sepolia',
@@ -81,4 +82,16 @@ export const getViemChainById = (chainId: SupportedChain): Chain | undefined => 
     },
     testnet: chainConfig.testnet,
   } as Chain;
+};
+
+export const publicClintByChainId = (chainId: SupportedChain): PublicClient => {
+  const chainConfig = getViemChainById(chainId);
+  const rpcUrl = chainConfig?.rpcUrls.default.http[0];
+  if (!rpcUrl) {
+    throw new Error(`RPC URL not found for chain ${chainId}`);
+  }
+  return createPublicClient({
+    chain: chainConfig,
+    transport: http(rpcUrl),
+  });
 };

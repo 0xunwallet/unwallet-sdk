@@ -41,18 +41,16 @@ export const processSinglePayment = async ({
   publicClient,
   chainId,
   tokenAddress,
-  amount,
+  requestedAmount,
   recipientAddress,
-  nonce,
 }: {
   username: string;
   walletClient: WalletClient;
   publicClient: PublicClient;
   chainId: SupportedChain;
   tokenAddress: string;
-  amount: string;
+  requestedAmount: string;
   recipientAddress: string;
-  nonce: number;
 }): Promise<SinglePaymentResult> => {
   const result = await singlePayment({
     username,
@@ -60,9 +58,8 @@ export const processSinglePayment = async ({
     publicClient,
     chainId,
     tokenAddress,
-    amount,
+    requestedAmount,
     recipientAddress,
-    nonce,
   });
   return result;
 };
