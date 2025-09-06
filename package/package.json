@@ -22,7 +22,7 @@
     "type": "git",
     "url": "git+https://github.com/0xunwallet/unwallet-sdk.git"
   },
-  "homepage": "https://github.com/0xunwallet/unwallet-sdk#readme",
+  "homepage": "https://www.unwallet.io",
   "bugs": {
     "url": "https://github.com/0xunwallet/unwallet-sdk/issues"
   },
