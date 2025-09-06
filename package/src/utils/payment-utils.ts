@@ -18,12 +18,12 @@ import {
 import { publicClintByChainId, RPC_CONFIG } from './chains-constants';
 import Safe from '@safe-global/protocol-kit';
 import { baseSepolia } from 'viem/chains';
-import { SAFE_ABI, USDC_ABI } from './constants';
+import { BACKEND_URL, SAFE_ABI, USDC_ABI } from './constants';
 import { type SinglePaymentResult } from '../types/payments';
 import { getTransactions } from './transaction-utils';
+import axios from 'axios';
 
 export const singlePayment = async ({
-  username,
   walletClient,
   chainId,
   tokenAddress,
@@ -31,7 +31,6 @@ export const singlePayment = async ({
   recipientAddress,
   publicClient,
 }: {
-  username: string;
   walletClient: WalletClient;
   chainId: SupportedChain;
   tokenAddress: string;
@@ -40,6 +39,21 @@ export const singlePayment = async ({
   publicClient: PublicClient;
 }): Promise<SinglePaymentResult> => {
   try {
+    const userAddress = walletClient.account?.address;
+    if (!userAddress) {
+      throw new Error('User address not found');
+    }
+
+    const { data } = await axios.post(`${BACKEND_URL}/api/user/resolve-username-by-eoa`, {
+      eoaaddress: userAddress,
+    });
+
+    if (!data.success) {
+      throw new Error('Failed to resolve username');
+    }
+
+    const username = data.data.username;
+
     const txnsResult = await getTransactions({
       username,
       publicClient: publicClintByChainId(chainId),

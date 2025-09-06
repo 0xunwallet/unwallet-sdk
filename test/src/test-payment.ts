@@ -11,7 +11,6 @@ export const testProcessOnePayment = async () => {
     console.log("🔍 Testing processOnePayment function...");
 
     const privateKey = process.env.PRIVATE_KEY;
-    const username = process.env.TEST_USERNAME || "kyskkysk";
     const tokenAddress = process.env.USDC_TOKEN_ADDRESS || "0x036cbd53842c5426634e7929541ec2318f3dcf7e";
     const recipientAddress = process.env.RECIPIENT_ADDRESS || "0xc6377415Ee98A7b71161Ee963603eE52fF7750FC";
 
@@ -36,9 +35,8 @@ export const testProcessOnePayment = async () => {
       walletClient: walletClient as WalletClient,
       publicClient: publicClient as PublicClient,
       chainId: 84532, // Base Sepolia
-      username,
       tokenAddress,
-      requestedAmount: "1",
+      requestedAmount: "0.001",
       recipientAddress,
     });
 
