@@ -6,6 +6,14 @@ import { type TransactionResult } from './types/withdrawal-data';
 import { PublicClient, WalletClient } from 'viem';
 import { singlePayment } from './utils/payment-utils';
 import { type SinglePaymentResult } from './types/payments';
+import { type StealthAddressResponse } from './types/stealth-address';
+import {
+  checkPaymentStatus as checkPaymentStatusUtil,
+  pollPaymentStatus as pollPaymentStatusUtil,
+  type PaymentStatus,
+  type PaymentStatusData,
+  type PollingOptions,
+} from './utils/payment-status';
 
 export const createStealthAddress = async ({
   username,
@@ -15,7 +23,7 @@ export const createStealthAddress = async ({
   username: string;
   chainId: SupportedChain;
   tokenAddress?: string;
-}) => {
+}): Promise<StealthAddressResponse> => {
   const chain = CHAIN_MAPPING[chainId];
   if (!chain) {
     throw new Error(`Chain ${chainId} not supported yet!`);
@@ -60,3 +68,7 @@ export const processSinglePayment = async ({
   });
   return result;
 };
+
+export const checkPaymentStatus = checkPaymentStatusUtil;
+export const pollPaymentStatus = pollPaymentStatusUtil;
+export type { PaymentStatus, PaymentStatusData, PollingOptions, StealthAddressResponse };

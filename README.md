@@ -18,7 +18,15 @@ npm install unwallet
 ## Quick Start
 
 ```typescript
-import { createStealthAddress, getTransactions, processSinglePayment } from 'unwallet';
+import {
+  createStealthAddress,
+  getTransactions,
+  processSinglePayment,
+  checkPaymentStatus,
+  pollPaymentStatus,
+  type StealthAddressResponse,
+  type PaymentStatus
+} from 'unwallet';
 import { createWalletClient, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -36,11 +44,14 @@ const publicClient = createPublicClient({
 });
 
 // Generate stealth address
-const stealthAddress = await createStealthAddress({
+const stealthAddress: StealthAddressResponse = await createStealthAddress({
   username: 'your-username',
-  chainId: 90..
+  chainId: 90..,
   tokenAddress: '0x...',
 });
+
+console.log('Payment ID:', stealthAddress.data.paymentId);
+console.log('Stealth Address:', stealthAddress.data.address);
 
 // Get transaction history
 const transactions = await getTransactions({
@@ -56,6 +67,17 @@ const payment = await processSinglePayment({
   tokenAddress: '0x...',
   requestedAmount: '1.0',
   recipientAddress: '0x...',
+});
+
+// Check payment status
+const status: PaymentStatus = await checkPaymentStatus('payment-id');
+
+// Poll payment status until completion
+const finalStatus: PaymentStatus = await pollPaymentStatus('payment-id', {
+  interval: 3000, // Poll every 3 seconds
+  maxAttempts: 20, // Max 1 minute
+  onStatusUpdate: (status) => console.log('Status:', status.data.status),
+  onComplete: (status) => console.log('Payment completed!'),
 });
 ```
 
@@ -92,6 +114,28 @@ Process a single payment with gasless transaction.
 - `tokenAddress` - Token contract address
 - `requestedAmount` - Amount to send
 - `recipientAddress` - Recipient's address
+
+### `checkPaymentStatus(paymentId)`
+
+Check the current status of a payment.
+
+**Parameters:**
+
+- `paymentId` - The payment ID to check
+
+### `pollPaymentStatus(paymentId, options)`
+
+Poll payment status until completion or timeout.
+
+**Parameters:**
+
+- `paymentId` - The payment ID to poll
+- `options` - Polling configuration:
+  - `interval` - Polling interval in milliseconds (default: 2000)
+  - `maxAttempts` - Maximum polling attempts (default: 30)
+  - `onStatusUpdate` - Callback for status updates
+  - `onComplete` - Callback when payment completes
+  - `onError` - Callback for errors
 
 ## License
 

@@ -2,6 +2,7 @@ import axios from 'axios';
 import { type SupportedChain } from '../types/supported-chains';
 import { CHAIN_MAPPING } from './chains-constants';
 import { BACKEND_URL, STEALTH_ADDRESS_GENERATION_MESSAGE } from './constants';
+import { type StealthAddressResponse } from '../types/stealth-address';
 import {
   generateEphemeralPrivateKey,
   extractViewingPrivateKeyNode,
@@ -15,14 +16,14 @@ export const getStealthAddress = async (
   tokenAddress: string,
   username: string,
   chainId: SupportedChain,
-) => {
+): Promise<StealthAddressResponse> => {
   const stealthAddresses: string[] = [];
   const safeAddresses: string[] = [];
 
   const chain = CHAIN_MAPPING[chainId];
   const usernameStr = username as string;
 
-  let res = {};
+  let res: StealthAddressResponse = {} as StealthAddressResponse;
 
   try {
     // Headers to match the curl request exactly
@@ -64,9 +65,21 @@ export const getStealthAddress = async (
     const usedNonce = currentNonce - 1;
 
     res = {
-      ...stealthData,
-      usedNonce: usedNonce,
-      currentNonce: currentNonce,
+      success: stealthResponseData.success,
+      timestamp: stealthResponseData.timestamp,
+      data: {
+        address: stealthData.address,
+        chainId: stealthData.chainId,
+        chainName: stealthData.chainName,
+        tokenAddress: stealthData.tokenAddress,
+        tokenAmount: stealthData.tokenAmount,
+        paymentId: stealthData.paymentId,
+        safeAddress: stealthData.safeAddress,
+        eventListener: stealthData.eventListener,
+        usedNonce: usedNonce,
+        currentNonce: currentNonce,
+      },
+      message: stealthResponseData.message,
     };
   } catch (error) {
     console.error(
