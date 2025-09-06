@@ -2,7 +2,11 @@
   "name": "unwallet-sdk-test",
   "version": "0.1.0",
   "scripts": {
-    "test": "node --loader ts-node/esm -r dotenv/config test.ts",
+    "test": "./run-tests.sh",
+    "test:stealth": "node --loader ts-node/esm -r dotenv/config src/test-stealth-address.ts",
+    "test:transactions": "node --loader ts-node/esm -r dotenv/config src/test-transactions.ts",
+    "test:payment": "node --loader ts-node/esm -r dotenv/config src/test-payment.ts",
+    "test:all": "node --loader ts-node/esm -r dotenv/config src/test.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier -w ."
   },

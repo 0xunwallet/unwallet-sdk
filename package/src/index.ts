@@ -2,6 +2,8 @@ import { CHAIN_MAPPING } from './utils/chains-constants';
 import { type SupportedChain } from './types/supported-chains';
 import { getStealthAddress, processSingleRedemptionWithSponsorship } from './utils/stealth-address';
 import { type RedemptionResult } from './types/redemption-result';
+import { getTransactions as fetchTransactions } from './utils/withdrawal-utils';
+import { type TransactionResult } from './types/withdrawal-data';
 import { PublicClient, WalletClient } from 'viem';
 
 export const createStealthAddress = async ({
@@ -61,4 +63,14 @@ export const processOnePayment = async ({
     payment,
   );
   return address;
+};
+
+export const getTransactions = async ({
+  username,
+  publicClient,
+}: {
+  username: string;
+  publicClient: PublicClient;
+}): Promise<TransactionResult> => {
+  return await fetchTransactions({ username, publicClient });
 };
