@@ -1,43 +1,97 @@
-# unwallet
+# Unwallet SDK
 
-TypeScript SDK for Unwallet.
+A TypeScript SDK for seamless crypto payments with stealth addresses and gasless transactions.
+
+## Features
+
+- **Stealth Address Generation** - Create private payment addresses
+- **Gasless Payments** - Process transactions without gas fees
+- **Transaction History** - Fetch payment data and balances
+- **Multi-chain Support** - Works across supported blockchains
 
 ## Installation
 
 ```bash
-pnpm add unwallet
+npm install unwallet
 ```
 
-## Usage
+## Quick Start
 
-```ts
-import { createStealthAddress, processOnePayment } from 'unwallet';
+```typescript
+import { createStealthAddress, getTransactions, processSinglePayment } from 'unwallet';
+import { createWalletClient, createPublicClient, http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
-// Create a stealth address for a username on a supported chain
-const address = await createStealthAddress({
-  username: 'alice',
-  chainId: 84532, // example: Base Sepolia
-  tokenAddress: '0x0000000000000000000000000000000000000000',
+// Create wallet and public clients
+const account = privateKeyToAccount('0x...');
+const walletClient = createWalletClient({
+  account,
+  chain: viemChain,
+  transport: http(),
 });
 
-// Process a single payment with sponsorship
-const result = await processOnePayment({
-  walletClient, // viem WalletClient
-  publicClient, // viem PublicClient
-  chainId: 84532,
-  username: 'alice',
-  tokenAddress: '0x0000000000000000000000000000000000000000',
-  amount: '1',
-  decimals: 18,
-  token: 'ETH',
-  nonce: 1,
-  recipientAddress: '0xrecipient...',
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http(),
+});
+
+// Generate stealth address
+const stealthAddress = await createStealthAddress({
+  username: 'your-username',
+  chainId: 90..
+  tokenAddress: '0x...',
+});
+
+// Get transaction history
+const transactions = await getTransactions({
+  username: 'your-username',
+  publicClient,
+});
+
+// Process payment
+const payment = await processSinglePayment({
+  walletClient,
+  publicClient,
+  chainId: 90..,
+  tokenAddress: '0x...',
+  requestedAmount: '1.0',
+  recipientAddress: '0x...',
 });
 ```
 
-## Repository
+## API Reference
 
-GitHub: [`0xunwallet/unwallet-sdk`](https://github.com/0xunwallet/unwallet-sdk)
+### `createStealthAddress(options)`
+
+Generate a stealth address for private payments.
+
+**Parameters:**
+
+- `username` - Your username
+- `chainId` - Chain ID (e.g., 84532 for Base Sepolia)
+- `tokenAddress` - Token contract address (optional)
+
+### `getTransactions(options)`
+
+Fetch transaction history and balances.
+
+**Parameters:**
+
+- `username` - Your username
+- `publicClient` - Viem public client instance
+
+### `processSinglePayment(options)`
+
+Process a single payment with gasless transaction.
+
+**Parameters:**
+
+- `walletClient` - Viem wallet client instance
+- `publicClient` - Viem public client instance
+- `chainId` - Chain ID
+- `tokenAddress` - Token contract address
+- `requestedAmount` - Amount to send
+- `recipientAddress` - Recipient's address
 
 ## License
 
