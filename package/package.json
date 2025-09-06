@@ -1,12 +1,14 @@
 {
   "name": "unwallet",
   "version": "0.3.0",
-  "description": "Unwallet TypeScript SDK",
+  "description": "A TypeScript SDK for seamless crypto payments with stealth addresses and gasless transactions",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
