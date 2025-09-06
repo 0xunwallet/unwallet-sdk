@@ -56,7 +56,7 @@ jobs:
           # Get the latest commit message
           COMMIT_MSG=$(git log -1 --pretty=%B)
 
-          # Check if commit message contains version bump indicators
+          # Check if commit message contains explicit version bump indicators
           if [[ "$COMMIT_MSG" =~ (major|minor|patch|feat|fix|breaking) ]]; then
             echo "should-bump=true" >> $GITHUB_OUTPUT
             
@@ -70,14 +70,17 @@ jobs:
             fi
           else
             echo "should-bump=false" >> $GITHUB_OUTPUT
+            echo "No version bump keywords found in commit message"
           fi
 
       - name: Bump version
         if: steps.version-check.outputs.should-bump == 'true'
         run: |
           cd package
+          echo "Bumping ${{ steps.version-check.outputs.bump-type }} version..."
           npm version ${{ steps.version-check.outputs.bump-type }} --no-git-tag-version
           echo "NEW_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+          echo "Version bumped to: $NEW_VERSION"
 
       - name: Check if package should be published
         id: publish-check
