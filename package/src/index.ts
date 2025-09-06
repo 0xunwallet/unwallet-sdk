@@ -2,7 +2,7 @@ import { CHAIN_MAPPING } from './utils/chains-constants';
 import { type SupportedChain } from './types/supported-chains';
 import { getStealthAddress, processSingleRedemptionWithSponsorship } from './utils/stealth-address';
 import { type RedemptionResult } from './types/redemption-result';
-import { getTransactions as fetchTransactions } from './utils/withdrawal-utils';
+import { getTransactions as fetchTransactions } from './utils/transaction-utils';
 import { type TransactionResult } from './types/withdrawal-data';
 import { PublicClient, WalletClient } from 'viem';
 
