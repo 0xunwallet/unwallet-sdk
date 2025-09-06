@@ -39,6 +39,7 @@ export const testProcessOnePayment = async () => {
       publicClient: publicClient as PublicClient,
       chainId: 84532, // Base Sepolia
       username,
+      nonce: 8,
       tokenAddress,
       amount: "1",
       recipientAddress,
