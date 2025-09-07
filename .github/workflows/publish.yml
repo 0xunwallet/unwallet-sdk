@@ -121,3 +121,39 @@ jobs:
           git tag "v$VERSION"
           git push origin main
           git push origin "v$VERSION"
+
+      - name: Get version for release
+        if: steps.publish-check.outputs.should-publish == 'true'
+        id: get-version
+        run: |
+          cd package
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: steps.publish-check.outputs.should-publish == 'true'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get-version.outputs.version }}
+          release_name: Release v${{ steps.get-version.outputs.version }}
+          body: |
+            ## What's Changed
+
+            This release includes the latest updates to the Unwallet SDK.
+
+            ### Installation
+            ```bash
+            npm install unwallet@${{ steps.get-version.outputs.version }}
+            ```
+
+            ### Package Details
+            - **Version**: ${{ steps.get-version.outputs.version }}
+            - **Registry**: [npmjs.org](https://www.npmjs.com/package/unwallet)
+            - **Documentation**: [unwallet.io](https://www.unwallet.io)
+
+            ---
+            *This release was automatically created by GitHub Actions.*
+          draft: false
+          prerelease: false
