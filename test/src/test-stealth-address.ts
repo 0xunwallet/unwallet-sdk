@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import { createStealthAddress, pollPaymentStatus } from "unwallet-sdk";
-
+import { getTokenAddress, currentChain } from "./utils/chain.js";
 // Load environment variables
 dotenv.config();
 
@@ -10,17 +10,17 @@ export const testCreateStealthAddress = async () => {
     console.log("🔍 Testing createStealthAddress function...");
 
     const username = process.env.TEST_USERNAME || "kyskkysk";
-    const tokenAddress = process.env.USDC_TOKEN_ADDRESS || "0x036cbd53842c5426634e7929541ec2318f3dcf7e";
+    const tokenAddress = getTokenAddress(currentChain.id);
 
     console.log("📋 Test parameters:", {
       username,
-      chainId: 84532, // Base Sepolia
+      chainId: currentChain.id,
       tokenAddress,
     });
 
     const result = await createStealthAddress({
       username,
-      chainId: 84532, // Base Sepolia
+      chainId: currentChain.id,
       tokenAddress,
     });
 

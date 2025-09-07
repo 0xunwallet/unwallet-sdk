@@ -1,4 +1,19 @@
-export const BACKEND_URL = 'https://unwall-production.up.railway.app';
+import { arbitrumSepolia, baseSepolia } from 'viem/chains';
+import { SupportedChain } from '../types/supported-chains';
+
+export const BACKEND_URL = 'https://unwallet-production.up.railway.app';
+
+export const getStealthAddressGenerationMessage = (chainId: SupportedChain) => {
+  switch (chainId) {
+    case baseSepolia.id:
+      return 'STEALTH_ADDRESS_GENERATION_ZZZZZ_BASE_SEPOLIA';
+    case arbitrumSepolia.id:
+      return 'STEALTH_ADDRESS_GENERATION_ZZZZZ_ARB_SEPOLIA';
+    default:
+      throw new Error(`Unsupported chain ID: ${chainId}`);
+  }
+};
+
 export const STEALTH_ADDRESS_GENERATION_MESSAGE = 'STEALTH_ADDRESS_GENERATION_ZZZZZ_BASE_SEPOLIA';
 
 export const SAFE_ABI = [

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { type SupportedChain } from '../types/supported-chains';
 import { CHAIN_MAPPING } from './chains-constants';
-import { BACKEND_URL, STEALTH_ADDRESS_GENERATION_MESSAGE } from './constants';
+import { BACKEND_URL, getStealthAddressGenerationMessage } from './constants';
 import { type StealthAddressResponse } from '../types/stealth-address';
 import {
   generateEphemeralPrivateKey,
@@ -117,7 +117,7 @@ export const generateInitialKeysOnClient = async ({
   }
 
   // STEP 1: Create a deterministic message for signing
-  const message = STEALTH_ADDRESS_GENERATION_MESSAGE;
+  const message = getStealthAddressGenerationMessage(chainId);
 
   const signature = await walletClient.signMessage({
     message,

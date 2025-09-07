@@ -15,9 +15,8 @@ import {
   predictSafeAddress,
   safeSignTypedData,
 } from './safe-utils';
-import { publicClintByChainId, RPC_CONFIG } from './chains-constants';
+import { getRpcUrlById, getViemChainById, publicClintByChainId } from './chains-constants';
 import Safe from '@safe-global/protocol-kit';
-import { baseSepolia } from 'viem/chains';
 import { BACKEND_URL, SAFE_ABI, USDC_ABI } from './constants';
 import { type SinglePaymentResult } from '../types/payments';
 import { getTransactions } from './transaction-utils';
@@ -133,10 +132,7 @@ export const singlePayment = async ({
       );
 
       // Predict Safe address
-      const predictedSafeAddress = await predictSafeAddress(
-        stealthAddress,
-        RPC_CONFIG.BASE_SEPOLIA.primary,
-      );
+      const predictedSafeAddress = await predictSafeAddress(stealthAddress, chainId);
       console.log(`   - Predicted Safe: ${predictedSafeAddress}`);
 
       // Initialize Safe Protocol Kit
@@ -150,7 +146,7 @@ export const singlePayment = async ({
         },
       };
 
-      const RPC_URL = RPC_CONFIG.BASE_SEPOLIA.primary;
+      const RPC_URL = getRpcUrlById(chainId);
       const protocolKit = await Safe.init({
         provider: RPC_URL,
         signer: stealthAddress,
@@ -198,7 +194,7 @@ export const singlePayment = async ({
       // Create wallet client and transfer data
       const spendingWalletClient = createWalletClient({
         account: privateKeyToAccount(spendingPrivateKey as `0x${string}`),
-        chain: baseSepolia,
+        chain: getViemChainById(chainId),
         transport: http(RPC_URL),
       });
 

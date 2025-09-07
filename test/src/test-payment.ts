@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import { processSinglePayment } from "unwallet-sdk";
 import { createPublicClient, createWalletClient, http, type PublicClient, type WalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
+import { currentChain, getTokenAddress } from "./utils/chain.js";
 
 dotenv.config();
 
@@ -11,7 +11,7 @@ export const testProcessOnePayment = async () => {
     console.log("🔍 Testing processOnePayment function...");
 
     const privateKey = process.env.PRIVATE_KEY;
-    const tokenAddress = process.env.USDC_TOKEN_ADDRESS || "0x036cbd53842c5426634e7929541ec2318f3dcf7e";
+    const tokenAddress = getTokenAddress(currentChain.id);
     const recipientAddress = process.env.RECIPIENT_ADDRESS || "0xc6377415Ee98A7b71161Ee963603eE52fF7750FC";
 
     if (!privateKey) {
@@ -22,19 +22,19 @@ export const testProcessOnePayment = async () => {
 
     const walletClient = createWalletClient({
       account,
-      chain: baseSepolia,
+      chain: currentChain,
       transport: http(),
     });
 
     const publicClient = createPublicClient({
-      chain: baseSepolia,
-      transport: http("https://sepolia.base.org"),
+      chain: currentChain,
+      transport: http(),
     });
 
     const result = await processSinglePayment({
       walletClient: walletClient as WalletClient,
       publicClient: publicClient as PublicClient,
-      chainId: 84532, // Base Sepolia
+      chainId: currentChain.id,
       tokenAddress,
       requestedAmount: "0.001",
       recipientAddress,

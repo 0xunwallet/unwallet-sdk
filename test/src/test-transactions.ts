@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { getTransactions } from "unwallet-sdk";
 import { createPublicClient, http, type PublicClient } from "viem";
-import { baseSepolia } from "viem/chains";
+import { currentChain } from "./utils/chain.js";
 
 // Load environment variables
 dotenv.config();
@@ -9,7 +9,7 @@ dotenv.config();
 // Test transaction fetching function
 export const testGetTransactions = async () => {
   const publicClient = createPublicClient({
-    chain: baseSepolia,
+    chain: currentChain,
     transport: http(),
   });
 

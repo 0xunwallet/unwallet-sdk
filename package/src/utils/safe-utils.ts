@@ -1,5 +1,5 @@
 import Safe from '@safe-global/protocol-kit';
-import { getViemChainById, RPC_CONFIG } from './chains-constants';
+import { getRpcUrlsById, getViemChainById } from './chains-constants';
 import { BACKEND_URL } from './constants';
 import { SupportedChain } from '../types/supported-chains';
 
@@ -100,11 +100,9 @@ export const safeSignTypedData = async (
 };
 
 // Predict safe address based on stealth address
-export async function predictSafeAddress(stealthAddress: string, rpcUrl?: string) {
+export async function predictSafeAddress(stealthAddress: string, chainId: SupportedChain) {
   // Use centralized RPC configuration with QuickNode as primary
-  const rpcEndpoints = rpcUrl
-    ? [rpcUrl, ...RPC_CONFIG.BASE_SEPOLIA.fallbacks]
-    : [RPC_CONFIG.BASE_SEPOLIA.primary, ...RPC_CONFIG.BASE_SEPOLIA.fallbacks];
+  const rpcEndpoints = getRpcUrlsById(chainId);
 
   try {
     console.log('🔍 Predicting Safe address using Protocol Kit for:', stealthAddress);
