@@ -3,6 +3,8 @@ import { SupportedChain } from '../types/supported-chains';
 
 export const BACKEND_URL = 'https://unwallet-production.up.railway.app';
 
+export const FACILITATOR_URL = 'https://arbsep.facilitator.unwallet.me';
+
 export const getStealthAddressGenerationMessage = (chainId: SupportedChain) => {
   switch (chainId) {
     case baseSepolia.id:
@@ -13,8 +15,6 @@ export const getStealthAddressGenerationMessage = (chainId: SupportedChain) => {
       throw new Error(`Unsupported chain ID: ${chainId}`);
   }
 };
-
-export const STEALTH_ADDRESS_GENERATION_MESSAGE = 'STEALTH_ADDRESS_GENERATION_ZZZZZ_BASE_SEPOLIA';
 
 export const SAFE_ABI = [
   {

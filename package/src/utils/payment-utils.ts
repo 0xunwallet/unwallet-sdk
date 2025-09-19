@@ -18,9 +18,14 @@ import {
 import { getRpcUrlById, getViemChainById, publicClintByChainId } from './chains-constants';
 import Safe from '@safe-global/protocol-kit';
 import { BACKEND_URL, SAFE_ABI, USDC_ABI } from './constants';
-import { type SinglePaymentResult } from '../types/payments';
+import {
+  type SinglePaymentResult,
+  type TransferWithAuthorizationData,
+  type TransferWithAuthorizationResult,
+} from '../types/payments';
 import { getTransactions } from './transaction-utils';
 import axios from 'axios';
+import crypto from 'crypto';
 
 export const singlePayment = async ({
   walletClient,
@@ -417,5 +422,129 @@ export const singlePayment = async ({
     // Re-throw with more context
     const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(`Withdrawal failed: ${errorMessage}`);
+  }
+};
+
+export const transferWithAuthorization = async ({
+  walletClient,
+  chainId,
+  tokenAddress,
+  recipientAddress,
+  amount,
+  validAfter = '0',
+  validBefore,
+}: {
+  walletClient: WalletClient;
+  chainId: SupportedChain;
+  tokenAddress: string;
+  recipientAddress: string;
+  amount: string;
+  validAfter?: string;
+  validBefore?: string;
+}): Promise<TransferWithAuthorizationResult> => {
+  try {
+    const userAddress = walletClient.account?.address;
+    if (!userAddress) {
+      throw new Error('User address not found');
+    }
+
+    console.log('🚀 Starting transferWithAuthorization...');
+    console.log('📋 Transfer details:', {
+      from: userAddress,
+      to: recipientAddress,
+      amount,
+      tokenAddress,
+      chainId,
+    });
+
+    // Generate random nonce
+    const nonce = '0x' + crypto.randomBytes(32).toString('hex');
+
+    // Set validBefore to 1 hour from now if not provided
+    const validBeforeTimestamp = validBefore || Math.floor(Date.now() / 1000 + 3600).toString();
+
+    // Create authorization data
+    const authorization: TransferWithAuthorizationData = {
+      from: userAddress,
+      to: recipientAddress,
+      value: amount,
+      validAfter,
+      validBefore: validBeforeTimestamp,
+      nonce,
+    };
+
+    console.log('✅ Authorization created:', authorization);
+
+    // Create EIP-712 domain and types for USDC TransferWithAuthorization
+    const domain = {
+      name: 'USD Coin',
+      version: '2',
+      chainId: chainId,
+      verifyingContract: tokenAddress,
+    };
+
+    const types = {
+      TransferWithAuthorization: [
+        { name: 'from', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'value', type: 'uint256' },
+        { name: 'validAfter', type: 'uint256' },
+        { name: 'validBefore', type: 'uint256' },
+        { name: 'nonce', type: 'bytes32' },
+      ],
+    };
+
+    const message = {
+      from: authorization.from,
+      to: authorization.to,
+      value: BigInt(authorization.value),
+      validAfter: BigInt(authorization.validAfter),
+      validBefore: BigInt(authorization.validBefore),
+      nonce: authorization.nonce,
+    };
+
+    console.log('✍️ Signing authorization...');
+
+    // Sign the typed data
+    const signature = await walletClient.signTypedData({
+      account: walletClient.account!,
+      domain,
+      types,
+      primaryType: 'TransferWithAuthorization',
+      message,
+    });
+
+    console.log('✅ Signature created:', signature);
+
+    // Get chain configuration for explorer URL
+    const chainConfig = getViemChainById(chainId);
+    const explorerUrl = chainConfig?.blockExplorers?.default?.url;
+
+    console.log('🎉 TransferWithAuthorization completed successfully!');
+
+    return {
+      success: true,
+      signature,
+      authorization,
+      explorerUrl: explorerUrl ? `${explorerUrl}/address/${tokenAddress}` : undefined,
+    };
+  } catch (error) {
+    console.error('❌ TransferWithAuthorization failed:', error);
+
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    return {
+      success: false,
+      signature: '',
+      authorization: {
+        from: '',
+        to: '',
+        value: '',
+        validAfter: '',
+        validBefore: '',
+        nonce: '',
+      },
+      error: errorMessage,
+    };
   }
 };

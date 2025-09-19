@@ -37,3 +37,23 @@ export interface SinglePaymentResult {
     explorerUrl: string;
   };
 }
+
+export interface TransferWithAuthorizationData {
+  from: string;
+  to: string;
+  value: string;
+  validAfter: string;
+  validBefore: string;
+  nonce: string;
+}
+
+export interface TransferWithAuthorizationResult {
+  success: boolean;
+  signature: string;
+  authorization: TransferWithAuthorizationData;
+  txHash?: string;
+  gasUsed?: string;
+  gasCost?: string;
+  explorerUrl?: string;
+  error?: string;
+}

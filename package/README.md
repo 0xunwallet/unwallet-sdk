@@ -18,14 +18,14 @@ npm install unwallet
 ## Quick Start
 
 ```typescript
-import { 
-  createStealthAddress, 
-  getTransactions, 
-  processSinglePayment, 
-  checkPaymentStatus, 
+import {
+  createStealthAddress,
+  getTransactions,
+  processSinglePayment,
+  checkPaymentStatus,
   pollPaymentStatus,
   type StealthAddressResponse,
-  type PaymentStatus 
+  type PaymentStatus
 } from 'unwallet';
 import { createWalletClient, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';

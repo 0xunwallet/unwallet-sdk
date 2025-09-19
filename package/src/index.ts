@@ -4,8 +4,12 @@ import { getStealthAddress } from './utils/stealth-address';
 import { getTransactions as fetchTransactions } from './utils/transaction-utils';
 import { type TransactionResult } from './types/withdrawal-data';
 import { PublicClient, WalletClient } from 'viem';
-import { singlePayment } from './utils/payment-utils';
-import { type SinglePaymentResult } from './types/payments';
+import { singlePayment, transferWithAuthorization } from './utils/payment-utils';
+import {
+  type SinglePaymentResult,
+  type TransferWithAuthorizationResult,
+  type TransferWithAuthorizationData,
+} from './types/payments';
 import { type StealthAddressResponse } from './types/stealth-address';
 import {
   checkPaymentStatus as checkPaymentStatusUtil,
@@ -71,4 +75,40 @@ export const processSinglePayment = async ({
 
 export const checkPaymentStatus = checkPaymentStatusUtil;
 export const pollPaymentStatus = pollPaymentStatusUtil;
-export type { PaymentStatus, PaymentStatusData, PollingOptions, StealthAddressResponse };
+
+export const createTransferWithAuthorization = async ({
+  walletClient,
+  chainId,
+  tokenAddress,
+  recipientAddress,
+  amount,
+  validAfter,
+  validBefore,
+}: {
+  walletClient: WalletClient;
+  chainId: SupportedChain;
+  tokenAddress: string;
+  recipientAddress: string;
+  amount: string;
+  validAfter?: string;
+  validBefore?: string;
+}): Promise<TransferWithAuthorizationResult> => {
+  return await transferWithAuthorization({
+    walletClient,
+    chainId,
+    tokenAddress,
+    recipientAddress,
+    amount,
+    validAfter,
+    validBefore,
+  });
+};
+
+export type {
+  PaymentStatus,
+  PaymentStatusData,
+  PollingOptions,
+  StealthAddressResponse,
+  TransferWithAuthorizationResult,
+  TransferWithAuthorizationData,
+};
