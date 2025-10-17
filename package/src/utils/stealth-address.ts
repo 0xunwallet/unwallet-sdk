@@ -107,17 +107,19 @@ export const generateInitialKeysOnClient = async ({
   uniqueNonces,
   walletClient,
   chainId,
+  msgToSign,
 }: {
   uniqueNonces: number[];
   walletClient: WalletClient;
   chainId: SupportedChain;
+  msgToSign?: string;
 }) => {
   if (!walletClient) {
     throw new Error('Wallet client not available');
   }
 
   // STEP 1: Create a deterministic message for signing
-  const message = getStealthAddressGenerationMessage(chainId);
+  const message = msgToSign || getStealthAddressGenerationMessage(chainId);
 
   const signature = await walletClient.signMessage({
     message,
