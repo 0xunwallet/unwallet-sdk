@@ -111,10 +111,19 @@ export const getApiKey = async (config: AccountConfig | SignedAccountConfig) => 
   };
 };
 
-export const createAccount = async ({ ens, apiKey }: { ens: string; apiKey: string }) => {
+export const createAccount = async ({
+  ens,
+  apiKey,
+  eigenAiKey,
+}: {
+  ens: string;
+  apiKey: string;
+  eigenAiKey?: string;
+}) => {
   const response = await Promise.resolve({
     ens,
     apiKey,
+    eigenAiKey,
   });
 
   return response;
