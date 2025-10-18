@@ -1,48 +1,16 @@
-import { Address, parseUnits, PublicClient, WalletClient, hashTypedData } from 'viem';
-import { SupportedChain } from '../types/supported-chains';
+import type { Address, Account, Hex } from 'viem';
+// import { parseUnits } from 'viem';
+import type { SupportedChain } from '../types/supported-chains';
+import type {
+  EnsData,
+  RegisterRequest,
+  AccountConfig,
+  SignedAccountConfig,
+} from '../types/account-types';
 import { publicClintByChainId } from './chains-constants';
 import { generateInitialKeysOnClient } from './stealth-address';
-
-export type Modules = {
-  autoEarn: boolean;
-  autoBridge: boolean;
-};
-
-export type AccountConfig = {
-  walletClient: WalletClient;
-  chainId: SupportedChain;
-  ens: string;
-  modules: Modules;
-  defaultToken: Address;
-  needPrivacy?: boolean;
-  verifiableLink?: boolean;
-  publicClient: PublicClient;
-};
-
-export type SignedAccountConfig = AccountConfig & {
-  signature: `0x${string}`;
-  configHash: `0x${string}`;
-};
-
-const CONFIG_DOMAIN = {
-  name: 'Unwallet',
-  version: '1.0.0',
-} as const;
-
-const CONFIG_TYPES = {
-  AccountConfig: [
-    { name: 'chainId', type: 'uint256' },
-    { name: 'ens', type: 'string' },
-    { name: 'modules', type: 'Modules' },
-    { name: 'defaultToken', type: 'address' },
-    { name: 'needPrivacy', type: 'bool' },
-    { name: 'verifiableLink', type: 'bool' },
-  ],
-  Modules: [
-    { name: 'autoEarn', type: 'bool' },
-    { name: 'autoBridge', type: 'bool' },
-  ],
-} as const;
+import { privateKeyToAccount } from 'viem/accounts';
+import { SERVER_URL_ENS } from './constants';
 
 export const signAccountConfig = async (config: AccountConfig): Promise<SignedAccountConfig> => {
   const configMessage = {
@@ -51,29 +19,18 @@ export const signAccountConfig = async (config: AccountConfig): Promise<SignedAc
     modules: config.modules,
     defaultToken: config.defaultToken,
     needPrivacy: config.needPrivacy ?? false,
-    verifiableLink: config.verifiableLink ?? false,
+    eigenAiEnabled: config.eigenAiEnabled ?? false,
   };
 
-  const signature = await config.walletClient.signTypedData({
+  const messageToSign = JSON.stringify(configMessage);
+
+  const signature = await config.walletClient.signMessage({
     account: config.walletClient.account!,
-    domain: {
-      ...CONFIG_DOMAIN,
-      chainId: config.chainId,
-    },
-    types: CONFIG_TYPES,
-    primaryType: 'AccountConfig',
-    message: configMessage,
+    message: messageToSign,
   });
 
-  const configHash = hashTypedData({
-    domain: {
-      ...CONFIG_DOMAIN,
-      chainId: config.chainId,
-    },
-    types: CONFIG_TYPES,
-    primaryType: 'AccountConfig',
-    message: configMessage,
-  });
+  // For configHash, we'll use a simple hash of the message
+  const configHash = `0x${Buffer.from(messageToSign).toString('hex')}` as `0x${string}`;
 
   return {
     ...config,
@@ -82,7 +39,22 @@ export const signAccountConfig = async (config: AccountConfig): Promise<SignedAc
   };
 };
 
-export const getApiKey = async (config: AccountConfig | SignedAccountConfig) => {
+export const getApiKey = async (
+  config: AccountConfig | SignedAccountConfig,
+  {
+    agentDetails,
+  }: {
+    agentDetails: {
+      email: string;
+      website: string;
+      description: string;
+      twitter: string;
+      github: string;
+      telegram: string;
+      discord: string;
+    };
+  },
+) => {
   // const isSufficentBalance = await checkBalanceGreaterThan(config, parseUnits('0.001', 6));
   // if (!isSufficentBalance) {
   //   throw new Error('Insufficient balance');
@@ -91,22 +63,90 @@ export const getApiKey = async (config: AccountConfig | SignedAccountConfig) => 
   const signedConfig = 'signature' in config ? config : await signAccountConfig(config);
 
   let stealthKeys: string[] = [];
+  let spendingPublicKey: string | undefined;
+  let viewingPrivateKey: string | undefined;
 
+  //if privacy is enabled, generate stealth keys
   if (config.needPrivacy) {
     const msgToSign = 'CREATE_ACCOUNT';
 
-    stealthKeys = await generateInitialKeysOnClient({
+    const keyResult = await generateInitialKeysOnClient({
       walletClient: config.walletClient || signedConfig.walletClient,
       chainId: config.chainId || signedConfig.chainId,
       uniqueNonces: [1],
       msgToSign,
     });
 
-    console.log('stealthKeys', stealthKeys);
+    stealthKeys = keyResult.spendingKeys;
+    const spendingPrivateKey = stealthKeys[0];
+    const spendingPrivateKeyAccount = privateKeyToAccount(spendingPrivateKey as `0x${string}`);
+
+    spendingPublicKey = spendingPrivateKeyAccount.publicKey;
+    viewingPrivateKey = keyResult.viewingPrivateKey;
+    console.log('spendingPublicKey', spendingPublicKey);
   }
+
+  //ens sign
+  const nameData: EnsData = {
+    ensUsername: config.ens,
+    eoaAddress: config.walletClient.account?.address as Address,
+    addresses: {
+      '60': config.walletClient.account?.address as Address, // Ethereum address (default for all chains)
+    },
+    texts: {
+      url: agentDetails.website,
+      email: agentDetails.email,
+      website: agentDetails.website,
+      description: agentDetails.description,
+      encryptionPublicKey: spendingPublicKey || '',
+      'com.twitter': agentDetails.twitter,
+      'com.github': agentDetails.github,
+      'com.discord': agentDetails.discord,
+    },
+    contenthash: '0x', // Empty content hash
+  };
+
+  const messageToSign = JSON.stringify(nameData);
+
+  const signature = await config.walletClient.signMessage({
+    message: messageToSign,
+    account: config.walletClient.account as Account,
+  });
+
+  const expiration = Date.now() + 365 * 24 * 60 * 60 * 1000;
+
+  const requestBody: RegisterRequest = {
+    ensData: nameData,
+    supportedChains: [config.chainId],
+    modules: config.modules,
+    privacyEnabled: config.needPrivacy ?? false,
+    privacyData: {
+      spendingPublicKey: (spendingPublicKey as Hex) || '0x',
+      viewingPrivateKey: (viewingPrivateKey as Hex) || '0x',
+    },
+    eigenAiEnabled: config.eigenAiEnabled ?? false,
+    signature: {
+      hash: signature,
+      message: messageToSign,
+      expiration,
+    },
+  };
+
+  const response = await fetch(`${SERVER_URL_ENS}/set`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'ENS-Gateway-Production-Registration/1.0',
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  const result = await response.json();
 
   return {
     apiKey: 'DUMMY_API_KEY',
+    ensCall: result,
+
     signature: signedConfig.signature,
     configHash: signedConfig.configHash,
   };

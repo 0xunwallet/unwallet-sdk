@@ -113,7 +113,10 @@ export const generateInitialKeysOnClient = async ({
   walletClient: WalletClient;
   chainId: SupportedChain;
   msgToSign?: string;
-}) => {
+}): Promise<{
+  spendingKeys: string[];
+  viewingPrivateKey: string;
+}> => {
   if (!walletClient) {
     throw new Error('Wallet client not available');
   }
@@ -195,5 +198,19 @@ export const generateInitialKeysOnClient = async ({
     return formattedSpendingPrivateKey;
   });
 
-  return processedKeys;
+  return {
+    spendingKeys: processedKeys,
+    viewingPrivateKey: keys.viewingPrivateKey,
+  };
+};
+
+// Backward compatibility wrapper - returns just the spending keys array
+export const generateInitialKeysOnClientLegacy = async (params: {
+  uniqueNonces: number[];
+  walletClient: WalletClient;
+  chainId: SupportedChain;
+  msgToSign?: string;
+}): Promise<string[]> => {
+  const result = await generateInitialKeysOnClient(params);
+  return result.spendingKeys;
 };

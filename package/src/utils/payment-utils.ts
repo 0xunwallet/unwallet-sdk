@@ -7,7 +7,7 @@ import {
   WalletClient,
 } from 'viem';
 import { SupportedChain } from '../types/supported-chains';
-import { generateInitialKeysOnClient } from './stealth-address';
+import { generateInitialKeysOnClientLegacy } from './stealth-address';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
   buildSafeTransaction,
@@ -112,7 +112,7 @@ export const singlePayment = async ({
 
     // Generate stealth keys for all selected transactions
     const nonces = selectedTxns.map((txn) => txn.nonce);
-    const keys = await generateInitialKeysOnClient({
+    const keys = await generateInitialKeysOnClientLegacy({
       walletClient,
       uniqueNonces: nonces,
       chainId,
@@ -127,7 +127,7 @@ export const singlePayment = async ({
     for (let i = 0; i < selectedTxns.length; i++) {
       const txn = selectedTxns[i];
       const spendingPrivateKey = keys[i];
-      const stealthAddress = privateKeyToAccount(spendingPrivateKey).address;
+      const stealthAddress = privateKeyToAccount(spendingPrivateKey as `0x${string}`).address;
 
       console.log(`\n🔍 Processing transaction ${i + 1}/${selectedTxns.length}:`);
       console.log(`   - Nonce: ${txn.nonce}`);
@@ -230,7 +230,7 @@ export const singlePayment = async ({
         nonce: safeNonce,
       });
 
-      const account = privateKeyToAccount(spendingPrivateKey);
+      const account = privateKeyToAccount(spendingPrivateKey as `0x${string}`);
       const signature = await safeSignTypedData(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         spendingWalletClient as any,

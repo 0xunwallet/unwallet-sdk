@@ -6,11 +6,27 @@ import { type TransactionResult } from './types/withdrawal-data';
 import { PublicClient, WalletClient } from 'viem';
 import { singlePayment, transferWithAuthorization } from './utils/payment-utils';
 import {
+  signAccountConfig,
+  getApiKey,
+  getRecipientAccountData,
+  checkBalanceGreaterThan,
+  getBalance,
+} from './utils/create-account';
+import {
   type SinglePaymentResult,
   type TransferWithAuthorizationResult,
   type TransferWithAuthorizationData,
 } from './types/payments';
 import { type StealthAddressResponse } from './types/stealth-address';
+import {
+  type Module,
+  type Texts,
+  type EnsData,
+  type CommonData,
+  type RegisterRequest,
+  type AccountConfig,
+  type SignedAccountConfig,
+} from './types/account-types';
 import {
   checkPaymentStatus as checkPaymentStatusUtil,
   pollPaymentStatus as pollPaymentStatusUtil,
@@ -104,11 +120,29 @@ export const createTransferWithAuthorization = async ({
   });
 };
 
+export { CHAIN_MAPPING };
+
+export {
+  signAccountConfig,
+  getApiKey,
+  getRecipientAccountData,
+  checkBalanceGreaterThan,
+  getBalance,
+};
+
 export type {
   PaymentStatus,
   PaymentStatusData,
   PollingOptions,
   StealthAddressResponse,
+  SupportedChain,
   TransferWithAuthorizationResult,
   TransferWithAuthorizationData,
+  Module,
+  Texts,
+  EnsData,
+  CommonData,
+  RegisterRequest,
+  AccountConfig,
+  SignedAccountConfig,
 };
