@@ -2,7 +2,7 @@
   "name": "unwallet-sdk-root",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@10",
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "build": "pnpm -C package build",
     "test": "pnpm -C test test",

@@ -83,10 +83,10 @@ export const signAccountConfig = async (config: AccountConfig): Promise<SignedAc
 };
 
 export const getApiKey = async (config: AccountConfig | SignedAccountConfig) => {
-  const isSufficentBalance = await checkBalanceGreaterThan(config, parseUnits('0.001', 6));
-  if (!isSufficentBalance) {
-    throw new Error('Insufficient balance');
-  }
+  // const isSufficentBalance = await checkBalanceGreaterThan(config, parseUnits('0.001', 6));
+  // if (!isSufficentBalance) {
+  //   throw new Error('Insufficient balance');
+  // }
 
   const signedConfig = 'signature' in config ? config : await signAccountConfig(config);
 
