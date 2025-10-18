@@ -32,6 +32,7 @@ const CONFIG_DOMAIN = {
 const CONFIG_TYPES = {
   AccountConfig: [
     { name: 'chainId', type: 'uint256' },
+    { name: 'ens', type: 'string' },
     { name: 'modules', type: 'Modules' },
     { name: 'defaultToken', type: 'address' },
     { name: 'needPrivacy', type: 'bool' },
@@ -46,8 +47,8 @@ const CONFIG_TYPES = {
 export const signAccountConfig = async (config: AccountConfig): Promise<SignedAccountConfig> => {
   const configMessage = {
     chainId: BigInt(config.chainId),
-    modules: config.modules,
     ens: config.ens,
+    modules: config.modules,
     defaultToken: config.defaultToken,
     needPrivacy: config.needPrivacy ?? false,
     verifiableLink: config.verifiableLink ?? false,
@@ -111,22 +112,20 @@ export const getApiKey = async (config: AccountConfig | SignedAccountConfig) => 
   };
 };
 
-export const createAccount = async ({
+export const getRecipientAccountData = async ({
   ens,
-  apiKey,
-  eigenAiKey,
+  chainId,
 }: {
   ens: string;
-  apiKey: string;
-  eigenAiKey?: string;
+  chainId: SupportedChain;
 }) => {
-  const response = await Promise.resolve({
-    ens,
-    apiKey,
-    eigenAiKey,
+  const address = await publicClintByChainId(chainId).getEnsAddress({
+    name: ens,
   });
 
-  return response;
+  return {
+    address,
+  };
 };
 
 export const checkBalanceGreaterThan = async (config: AccountConfig, amount: bigint) => {
