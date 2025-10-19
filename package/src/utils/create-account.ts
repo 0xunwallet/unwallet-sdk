@@ -132,7 +132,9 @@ export const getApiKey = async (
     account: config.walletClient.account as Account,
   });
 
-  const requestBodyAny: any = {
+  const requestBodyPartial: Omit<RegisterRequest, 'privacyData'> & {
+    privacyData?: RegisterRequest['privacyData'];
+  } = {
     ensData: nameData,
     supportedChains: [config.chainId.toString()] as unknown as RegisterRequest['supportedChains'],
     modules: config.modules,
@@ -147,13 +149,13 @@ export const getApiKey = async (
   };
 
   if (config.needPrivacy) {
-    requestBodyAny.privacyData = {
+    requestBodyPartial.privacyData = {
       spendingPublicKey: (spendingPublicKey as Hex) || '0x',
       viewingPrivateKey: (viewingPrivateKey as Hex) || '0x',
     };
   }
 
-  const requestBody = requestBodyAny as RegisterRequest;
+  const requestBody = requestBodyPartial as RegisterRequest;
 
   console.log('Request body being sent:', JSON.stringify(requestBody, null, 2));
 

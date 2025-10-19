@@ -109,7 +109,9 @@ export const prepareRegisterRequest = async (
 
   const expiration = Date.now() + 365 * 24 * 60 * 60 * 1000;
 
-  const req: any = {
+  const req: Omit<RegisterRequest, 'privacyData'> & {
+    privacyData?: RegisterRequest['privacyData'];
+  } = {
     ensData,
     supportedChains:
       registrationData.supportedChains as unknown as RegisterRequest['supportedChains'],
