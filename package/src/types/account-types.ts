@@ -11,6 +11,7 @@ export interface Module {
 
 export interface Texts {
   url: string;
+  avatar: string;
   email: string;
   website: string;
   description: string;
@@ -49,6 +50,7 @@ export interface RegisterRequest extends CommonData {
     hash: Hex;
     message: string;
     expiration: number;
+    signature: Hex;
   };
 }
 

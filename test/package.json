@@ -8,6 +8,8 @@
     "test:payment": "node --loader ts-node/esm -r dotenv/config src/test-payment.ts",
     "test:transfer-authorization": "node --loader ts-node/esm -r dotenv/config src/test-transfer-authorization.ts",
     "test:recipient-account": "node --loader ts-node/esm -r dotenv/config src/test-recipient-account.ts",
+    "test:get-api-key": "node --loader ts-node/esm -r dotenv/config src/test-get-api-key.ts",
+    "prepare:curl": "node --loader ts-node/esm -r dotenv/config src/scripts/prepare-curl.ts",
     "test:all": "node --loader ts-node/esm -r dotenv/config src/test.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier -w ."

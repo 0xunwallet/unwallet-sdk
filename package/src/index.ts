@@ -34,6 +34,14 @@ import {
   type PaymentStatusData,
   type PollingOptions,
 } from './utils/payment-status';
+import {
+  generatePrivacyKeys,
+  buildEnsData,
+  buildRegistrationData,
+  signRegistrationData,
+  prepareRegisterRequest,
+  prettyPrintRegisterRequest,
+} from './utils/registration-prep';
 
 export const createStealthAddress = async ({
   username,
@@ -128,6 +136,13 @@ export {
   getRecipientAccountData,
   checkBalanceGreaterThan,
   getBalance,
+  // Registration prep (no network)
+  generatePrivacyKeys,
+  buildEnsData,
+  buildRegistrationData,
+  signRegistrationData,
+  prepareRegisterRequest,
+  prettyPrintRegisterRequest,
 };
 
 export type {

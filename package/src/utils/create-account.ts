@@ -14,7 +14,7 @@ import { SERVER_URL_ENS } from './constants';
 
 export const signAccountConfig = async (config: AccountConfig): Promise<SignedAccountConfig> => {
   const configMessage = {
-    chainId: BigInt(config.chainId),
+    chainId: config.chainId,
     ens: config.ens,
     modules: config.modules,
     defaultToken: config.defaultToken,
@@ -94,30 +94,44 @@ export const getApiKey = async (
       '60': config.walletClient.account?.address as Address, // Ethereum address (default for all chains)
     },
     texts: {
-      url: agentDetails.website,
-      email: agentDetails.email,
-      website: agentDetails.website,
-      description: agentDetails.description,
+      url: agentDetails.website || '',
+      avatar: agentDetails.website + '/avatar' || '',
+      email: agentDetails.email || '',
+      website: agentDetails.website || '',
+      description: agentDetails.description || '',
       encryptionPublicKey: spendingPublicKey || '',
-      'com.twitter': agentDetails.twitter,
-      'com.github': agentDetails.github,
-      'com.discord': agentDetails.discord,
+      'com.twitter': agentDetails.twitter || '',
+      'com.github': agentDetails.github || '',
+      'com.discord': agentDetails.discord || '',
     },
     contenthash: '0x', // Empty content hash
   };
 
-  const messageToSign = JSON.stringify(nameData);
+  const expiration = Date.now() + 365 * 24 * 60 * 60 * 1000;
+
+  // Create the complete registration data that matches what the server expects
+  const registrationData = {
+    ensData: nameData,
+    supportedChains: [config.chainId.toString()],
+    modules: config.modules,
+    privacyEnabled: config.needPrivacy ?? false,
+    privacyData: {
+      spendingPublicKey: (spendingPublicKey as Hex) || '0x',
+      viewingPrivateKey: (viewingPrivateKey as Hex) || '0x',
+    },
+    eigenAiEnabled: config.eigenAiEnabled ?? false,
+  };
+
+  const messageToSign = JSON.stringify(registrationData);
 
   const signature = await config.walletClient.signMessage({
     message: messageToSign,
     account: config.walletClient.account as Account,
   });
 
-  const expiration = Date.now() + 365 * 24 * 60 * 60 * 1000;
-
   const requestBody: RegisterRequest = {
     ensData: nameData,
-    supportedChains: [config.chainId],
+    supportedChains: [config.chainId.toString()] as any,
     modules: config.modules,
     privacyEnabled: config.needPrivacy ?? false,
     privacyData: {
@@ -128,20 +142,38 @@ export const getApiKey = async (
     signature: {
       hash: signature,
       message: messageToSign,
-      expiration,
+      expiration: expiration,
+      signature: signature,
     },
   };
+
+  console.log('Request body being sent:', JSON.stringify(requestBody, null, 2));
 
   const response = await fetch(`${SERVER_URL_ENS}/set`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'User-Agent': 'ENS-Gateway-Production-Registration/1.0',
     },
     body: JSON.stringify(requestBody),
   });
 
   const result = await response.json();
+
+  console.log('result', result);
+
+  // Log detailed validation errors
+  if (result.details && Array.isArray(result.details)) {
+    console.log('Validation error details:');
+    result.details.forEach((detail: any, index: number) => {
+      console.log(`Error ${index + 1}:`, {
+        code: detail.code,
+        expected: detail.expected,
+        received: detail.received,
+        path: detail.path,
+        message: detail.message,
+      });
+    });
+  }
 
   return {
     apiKey: 'DUMMY_API_KEY',
