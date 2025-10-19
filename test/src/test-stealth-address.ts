@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { createStealthAddress, pollPaymentStatus } from "unwallet-sdk";
+import { createStealthAddress, pollPaymentStatus } from "unwallet";
 import { getTokenAddress, currentChain } from "./utils/chain.js";
 // Load environment variables
 dotenv.config();

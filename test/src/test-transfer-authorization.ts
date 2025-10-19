@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { createTransferWithAuthorization } from "unwallet-sdk";
+import { createTransferWithAuthorization } from "unwallet";
 import { createWalletClient, http, type WalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { currentChain, getTokenAddress } from "./utils/chain.js";

@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { processSinglePayment } from "unwallet-sdk";
+import { processSinglePayment } from "unwallet";
 import { createPublicClient, createWalletClient, http, type PublicClient, type WalletClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { currentChain, getTokenAddress } from "./utils/chain.js";

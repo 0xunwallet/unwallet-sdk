@@ -7,6 +7,7 @@
     "test:transactions": "node --loader ts-node/esm -r dotenv/config src/test-transactions.ts",
     "test:payment": "node --loader ts-node/esm -r dotenv/config src/test-payment.ts",
     "test:transfer-authorization": "node --loader ts-node/esm -r dotenv/config src/test-transfer-authorization.ts",
+    "test:recipient-account": "node --loader ts-node/esm -r dotenv/config src/test-recipient-account.ts",
     "test:all": "node --loader ts-node/esm -r dotenv/config src/test.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier -w ."
@@ -23,7 +24,7 @@
     "typescript": "5.5.4"
   },
   "dependencies": {
-    "unwallet-sdk": "link:../package",
+    "unwallet": "link:../package",
     "viem": "^2.37.3"
   },
   "type": "module"

@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import { getTransactions } from "unwallet-sdk";
+import { getTransactions } from "unwallet";
 import { createPublicClient, http, type PublicClient } from "viem";
 import { currentChain } from "./utils/chain.js";
 

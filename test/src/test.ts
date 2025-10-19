@@ -11,6 +11,7 @@ const runAllTests = async () => {
     const { testGetTransactions } = await import("./test-transactions.js");
     const { testProcessOnePayment } = await import("./test-payment.js");
     const { testTransferWithAuthorization } = await import("./test-transfer-authorization.js");
+    const { testGetRecipientAccountData } = await import("./test-recipient-account.js");
 
     // Test 1: Stealth Address Generation
     console.log("=".repeat(50));
@@ -35,6 +36,12 @@ const runAllTests = async () => {
     console.log("TEST 4: Transfer With Authorization");
     console.log("=".repeat(50));
     await testTransferWithAuthorization();
+
+    // Test 5: Get Recipient Account Data
+    console.log("\n" + "=".repeat(50));
+    console.log("TEST 5: Get Recipient Account Data");
+    console.log("=".repeat(50));
+    await testGetRecipientAccountData();
 
     console.log("\n" + "=".repeat(50));
     console.log("✅ All tests completed!");

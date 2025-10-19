@@ -22,5 +22,17 @@ node --loader ts-node/esm -r dotenv/config src/test-payment.ts
 
 echo ""
 echo "=================================================="
+echo "TEST 4: Transfer With Authorization"
+echo "=================================================="
+node --loader ts-node/esm -r dotenv/config src/test-transfer-authorization.ts
+
+echo ""
+echo "=================================================="
+echo "TEST 5: Get Recipient Account Data"
+echo "=================================================="
+node --loader ts-node/esm -r dotenv/config src/test-recipient-account.ts
+
+echo ""
+echo "=================================================="
 echo "✅ All tests completed!"
 echo "=================================================="
