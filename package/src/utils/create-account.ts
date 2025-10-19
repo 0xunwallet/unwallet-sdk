@@ -99,7 +99,7 @@ export const getApiKey = async (
       email: agentDetails.email || '',
       website: agentDetails.website || '',
       description: agentDetails.description || '',
-      encryptionPublicKey: spendingPublicKey || '',
+      encryptionPublicKey: (spendingPublicKey as Hex) || '0x',
       'com.twitter': agentDetails.twitter || '',
       'com.github': agentDetails.github || '',
       'com.discord': agentDetails.discord || '',
@@ -115,10 +115,13 @@ export const getApiKey = async (
     supportedChains: [config.chainId.toString()],
     modules: config.modules,
     privacyEnabled: config.needPrivacy ?? false,
-    privacyData: {
-      spendingPublicKey: (spendingPublicKey as Hex) || '0x',
-      viewingPrivateKey: (viewingPrivateKey as Hex) || '0x',
-    },
+    privacyData:
+      (config.needPrivacy ?? false)
+        ? {
+            spendingPublicKey: (spendingPublicKey as Hex) || '0x',
+            viewingPrivateKey: (viewingPrivateKey as Hex) || '0x',
+          }
+        : undefined,
     eigenAiEnabled: config.eigenAiEnabled ?? false,
   };
 
@@ -129,15 +132,11 @@ export const getApiKey = async (
     account: config.walletClient.account as Account,
   });
 
-  const requestBody: RegisterRequest = {
+  const requestBodyAny: any = {
     ensData: nameData,
     supportedChains: [config.chainId.toString()] as unknown as RegisterRequest['supportedChains'],
     modules: config.modules,
     privacyEnabled: config.needPrivacy ?? false,
-    privacyData: {
-      spendingPublicKey: (spendingPublicKey as Hex) || '0x',
-      viewingPrivateKey: (viewingPrivateKey as Hex) || '0x',
-    },
     eigenAiEnabled: config.eigenAiEnabled ?? false,
     signature: {
       hash: signature,
@@ -146,6 +145,15 @@ export const getApiKey = async (
       signature: signature,
     },
   };
+
+  if (config.needPrivacy) {
+    requestBodyAny.privacyData = {
+      spendingPublicKey: (spendingPublicKey as Hex) || '0x',
+      viewingPrivateKey: (viewingPrivateKey as Hex) || '0x',
+    };
+  }
+
+  const requestBody = requestBodyAny as RegisterRequest;
 
   console.log('Request body being sent:', JSON.stringify(requestBody, null, 2));
 

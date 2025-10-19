@@ -56,7 +56,7 @@ export const buildEnsData = (
       email: agentDetails.email || '',
       website: agentDetails.website || '',
       description: agentDetails.description || '',
-      encryptionPublicKey: (spendingPublicKey as string) || '',
+      encryptionPublicKey: (spendingPublicKey as string) || '0x',
       'com.twitter': agentDetails.twitter || '',
       'com.github': agentDetails.github || '',
       'com.discord': agentDetails.discord || '',
@@ -75,10 +75,13 @@ export const buildRegistrationData = (
     supportedChains: [config.chainId.toString()],
     modules: config.modules,
     privacyEnabled: config.needPrivacy ?? false,
-    privacyData: {
-      spendingPublicKey: (privacyKeys?.spendingPublicKey as Hex) || '0x',
-      viewingPrivateKey: (privacyKeys?.viewingPrivateKey as Hex) || '0x',
-    },
+    privacyData:
+      (config.needPrivacy ?? false)
+        ? {
+            spendingPublicKey: (privacyKeys?.spendingPublicKey as Hex) || '0x',
+            viewingPrivateKey: (privacyKeys?.viewingPrivateKey as Hex) || '0x',
+          }
+        : undefined,
     eigenAiEnabled: config.eigenAiEnabled ?? false,
   };
 };
@@ -106,13 +109,12 @@ export const prepareRegisterRequest = async (
 
   const expiration = Date.now() + 365 * 24 * 60 * 60 * 1000;
 
-  return {
+  const req: any = {
     ensData,
     supportedChains:
       registrationData.supportedChains as unknown as RegisterRequest['supportedChains'],
     modules: registrationData.modules,
     privacyEnabled: registrationData.privacyEnabled,
-    privacyData: registrationData.privacyData,
     eigenAiEnabled: registrationData.eigenAiEnabled,
     signature: {
       hash: signature as Hex,
@@ -121,6 +123,11 @@ export const prepareRegisterRequest = async (
       signature: signature as Hex,
     },
   };
+  if (registrationData.privacyData !== undefined) {
+    req.privacyData = registrationData.privacyData;
+  }
+
+  return req as RegisterRequest;
 };
 
 export const prettyPrintRegisterRequest = (request: RegisterRequest): string => {
