@@ -21,9 +21,6 @@ export const testGetApiKey = async () => {
 
     // Check if private key is available
     const privateKey = generatePrivateKey();
-    if (!privateKey) {
-      throw new Error("PRIVATE_KEY environment variable is required for testing");
-    }
 
     // Create account from private key
     const account = privateKeyToAccount(privateKey as `0x${string}`);
@@ -49,7 +46,7 @@ export const testGetApiKey = async () => {
       ens: ens,
       modules: [],
       defaultToken: "0xA0b86a33E6441b8c4C8C0C4A0b86a33E6441b8c4C" as `0x${string}`, // Dummy token for mainnet
-      needPrivacy: true,
+      needPrivacy: false,
       eigenAiEnabled: false,
       publicClient,
     };

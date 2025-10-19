@@ -131,7 +131,7 @@ export const getApiKey = async (
 
   const requestBody: RegisterRequest = {
     ensData: nameData,
-    supportedChains: [config.chainId.toString()] as any,
+    supportedChains: [config.chainId.toString()] as unknown as RegisterRequest['supportedChains'],
     modules: config.modules,
     privacyEnabled: config.needPrivacy ?? false,
     privacyData: {
@@ -164,19 +164,26 @@ export const getApiKey = async (
   // Log detailed validation errors
   if (result.details && Array.isArray(result.details)) {
     console.log('Validation error details:');
-    result.details.forEach((detail: any, index: number) => {
+    result.details.forEach((detail: unknown, index: number) => {
+      const d = detail as {
+        code: string;
+        expected?: unknown;
+        received?: unknown;
+        path?: unknown;
+        message: string;
+      };
       console.log(`Error ${index + 1}:`, {
-        code: detail.code,
-        expected: detail.expected,
-        received: detail.received,
-        path: detail.path,
-        message: detail.message,
+        code: d.code,
+        expected: d.expected,
+        received: d.received,
+        path: d.path,
+        message: d.message,
       });
     });
   }
 
   return {
-    apiKey: 'DUMMY_API_KEY',
+    apiKey: result.apiKey,
     ensCall: result,
 
     signature: signedConfig.signature,
