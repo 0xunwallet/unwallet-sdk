@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { mainnet } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 import { AccountConfig, getApiKey, SupportedChain } from "unwallet";
 import { generatePrivateKey } from "viem/accounts";
 
@@ -28,12 +28,12 @@ export const testGetApiKey = async () => {
     // Create wallet and public clients
     const walletClient = createWalletClient({
       account,
-      chain: mainnet,
+      chain: baseSepolia,
       transport: http(),
     });
 
     const publicClient = createPublicClient({
-      chain: mainnet,
+      chain: baseSepolia,
       transport: http(),
     });
 
@@ -42,11 +42,11 @@ export const testGetApiKey = async () => {
     // Test configuration
     const config = {
       walletClient,
-      chainId: mainnet.id as SupportedChain,
+      chainId: baseSepolia.id as SupportedChain,
       ens: ens,
       modules: [],
-      defaultToken: "0xA0b86a33E6441b8c4C8C0C4A0b86a33E6441b8c4C" as `0x${string}`, // Dummy token for mainnet
-      needPrivacy: false,
+      defaultToken: "0xA0b86a33E6441b8c4C8C0C4A0b86a33E6441b8c4C" as `0x${string}`,
+      needPrivacy: true,
       eigenAiEnabled: false,
       publicClient,
     };
