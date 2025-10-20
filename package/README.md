@@ -84,8 +84,14 @@ const finalStatus: PaymentStatus = await pollPaymentStatus('payment-id', {
 
 // Get available modules
 const modules: ModulesResponse = await getModules();
-console.log('Available modules:', modules.modules);
-console.log('Supported networks:', modules.supportedNetworks);
+console.log('Available modules:', modules.modules.length);
+
+modules.modules.forEach((module) => {
+  console.log(`${module.name}: ${module.description}`);
+  console.log('Required fields:', module.userInputs.requiredFields);
+  console.log('Supported tokens:', module.userInputs.supportedTokens);
+  console.log('Deployments:', module.deployments);
+});
 ```
 
 ## API Reference
@@ -152,26 +158,42 @@ Fetch all available smart contract modules that can be installed on user account
 
 - `ModulesResponse` - Object containing:
   - `success` - Boolean indicating if the request was successful
-  - `modules` - Array of available modules with their details
-  - `totalModules` - Total number of available modules
-  - `supportedNetworks` - Array of supported blockchain networks with name, chainId, and blockExplorer
+  - `modules` - Array of available modules with their details including:
+    - `id` - Unique module identifier
+    - `name` - Human-readable module name
+    - `description` - Module description
+    - `userInputs` - Required fields and supported tokens for each network
+    - `deployments` - Contract addresses for each supported network
+  - `installationGuide` - Guide for formatting modules for registration
 
 **Example:**
 
 ```typescript
 const modules = await getModules();
-console.log(`Found ${modules.totalModules} modules`);
-console.log(`Supported networks: ${modules.supportedNetworks.map((n) => n.name).join(', ')}`);
+console.log(`Found ${modules.modules.length} modules`);
 
 modules.modules.forEach((module) => {
   console.log(`${module.name}: ${module.description}`);
-  console.log(`Supported tokens: ${module.supportedTokens.join(', ')}`);
-  console.log(`Features: ${module.features.join(', ')}`);
 
+  // Display required fields
+  module.userInputs.requiredFields.forEach((field) => {
+    console.log(`  Required: ${field.name} (${field.type}) - ${field.description}`);
+  });
+
+  // Display supported tokens by network
+  Object.entries(module.userInputs.supportedTokens).forEach(([network, tokens]) => {
+    console.log(`  ${network}: ${tokens.tokens.map((t) => t.symbol).join(', ')}`);
+  });
+
+  // Display deployments
   module.deployments.forEach((deployment) => {
-    console.log(`  - ${deployment.networkName}: ${deployment.address}`);
+    console.log(`  ${deployment.network}: ${deployment.address}`);
   });
 });
+
+// Access installation guide
+console.log('Module format:', modules.installationGuide.moduleFormat.interface);
+console.log('Example requests:', modules.installationGuide.exampleRequests);
 ```
 
 ## License

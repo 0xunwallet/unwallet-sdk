@@ -71,32 +71,67 @@ export type SignedAccountConfig = AccountConfig & {
 };
 
 // Types for modules API response
+export interface RequiredField {
+  name: string;
+  type: string;
+  description: string;
+  example: number | string;
+}
+
+export interface TokenInfo {
+  symbol: string;
+  address: string;
+  decimals: number;
+}
+
+export interface NetworkTokens {
+  chainId: number;
+  tokens: TokenInfo[];
+}
+
+export interface UserInputs {
+  requiredFields: RequiredField[];
+  supportedTokens: Record<string, NetworkTokens>;
+}
+
 export interface ModuleDeployment {
   network: string;
   chainId: number;
   address: string;
-  networkName: string;
-  blockExplorer: string;
 }
 
 export interface ModuleInfo {
   id: string;
   name: string;
   description: string;
-  supportedTokens: string[];
-  features: string[];
+  userInputs: UserInputs;
   deployments: ModuleDeployment[];
 }
 
-export interface SupportedNetwork {
-  name: string;
-  chainId: number;
-  blockExplorer: string;
+export interface ModuleFormat {
+  interface: {
+    address: string;
+    chainId: string;
+    data: string;
+  };
+}
+
+export interface ExampleRequest {
+  userInput: Record<string, string | number>;
+  registerRequestFormat: {
+    address: string;
+    chainId: string;
+    data: string;
+  };
+}
+
+export interface InstallationGuide {
+  moduleFormat: ModuleFormat;
+  exampleRequests: Record<string, ExampleRequest>;
 }
 
 export interface ModulesResponse {
   success: boolean;
   modules: ModuleInfo[];
-  totalModules: number;
-  supportedNetworks: SupportedNetwork[];
+  installationGuide: InstallationGuide;
 }

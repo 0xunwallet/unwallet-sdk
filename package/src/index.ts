@@ -30,7 +30,13 @@ import {
   type ModuleInfo,
   type ModuleDeployment,
   type ModulesResponse,
-  type SupportedNetwork,
+  type RequiredField,
+  type TokenInfo,
+  type NetworkTokens,
+  type UserInputs,
+  type ModuleFormat,
+  type ExampleRequest,
+  type InstallationGuide,
 } from './types/account-types';
 import {
   checkPaymentStatus as checkPaymentStatusUtil,
@@ -169,5 +175,11 @@ export type {
   ModuleInfo,
   ModuleDeployment,
   ModulesResponse,
-  SupportedNetwork,
+  RequiredField,
+  TokenInfo,
+  NetworkTokens,
+  UserInputs,
+  ModuleFormat,
+  ExampleRequest,
+  InstallationGuide,
 };
