@@ -2,8 +2,9 @@ import dotenv from "dotenv";
 import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
-import { AccountConfig, getApiKey, SupportedChain } from "unwallet";
 import { generatePrivateKey } from "viem/accounts";
+import type { AccountConfig, SupportedChain } from "unwallet";
+import { getApiKey } from "unwallet";
 
 // Simple helper to generate a random, likely-unique ENS label for testing
 const generateRandomEnsName = (): string => {
