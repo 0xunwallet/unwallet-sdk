@@ -24,8 +24,10 @@ import {
   processSinglePayment,
   checkPaymentStatus,
   pollPaymentStatus,
+  getModules,
   type StealthAddressResponse,
-  type PaymentStatus
+  type PaymentStatus,
+  type ModulesResponse
 } from 'unwallet';
 import { createWalletClient, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -79,6 +81,11 @@ const finalStatus: PaymentStatus = await pollPaymentStatus('payment-id', {
   onStatusUpdate: (status) => console.log('Status:', status.data.status),
   onComplete: (status) => console.log('Payment completed!'),
 });
+
+// Get available modules
+const modules: ModulesResponse = await getModules();
+console.log('Available modules:', modules.modules);
+console.log('Supported networks:', modules.supportedNetworks);
 ```
 
 ## API Reference
@@ -136,6 +143,36 @@ Poll payment status until completion or timeout.
   - `onStatusUpdate` - Callback for status updates
   - `onComplete` - Callback when payment completes
   - `onError` - Callback for errors
+
+### `getModules()`
+
+Fetch all available smart contract modules that can be installed on user accounts.
+
+**Returns:**
+
+- `ModulesResponse` - Object containing:
+  - `success` - Boolean indicating if the request was successful
+  - `modules` - Array of available modules with their details
+  - `totalModules` - Total number of available modules
+  - `supportedNetworks` - Array of supported blockchain networks with name, chainId, and blockExplorer
+
+**Example:**
+
+```typescript
+const modules = await getModules();
+console.log(`Found ${modules.totalModules} modules`);
+console.log(`Supported networks: ${modules.supportedNetworks.map((n) => n.name).join(', ')}`);
+
+modules.modules.forEach((module) => {
+  console.log(`${module.name}: ${module.description}`);
+  console.log(`Supported tokens: ${module.supportedTokens.join(', ')}`);
+  console.log(`Features: ${module.features.join(', ')}`);
+
+  module.deployments.forEach((deployment) => {
+    console.log(`  - ${deployment.networkName}: ${deployment.address}`);
+  });
+});
+```
 
 ## License
 

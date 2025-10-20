@@ -9,6 +9,7 @@
     "test:transfer-authorization": "node --loader ts-node/esm -r dotenv/config src/test-transfer-authorization.ts",
     "test:recipient-account": "node --loader ts-node/esm -r dotenv/config src/test-recipient-account.ts",
     "test:get-api-key": "node --loader ts-node/esm -r dotenv/config src/test-get-api-key.ts",
+    "test:modules": "node --loader ts-node/esm -r dotenv/config src/test-modules.ts",
     "prepare:curl": "node --loader ts-node/esm -r dotenv/config src/scripts/prepare-curl.ts",
     "test:all": "node --loader ts-node/esm -r dotenv/config src/test.ts",
     "lint": "eslint . --ext .ts",

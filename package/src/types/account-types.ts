@@ -69,3 +69,34 @@ export type SignedAccountConfig = AccountConfig & {
   signature: `0x${string}`;
   configHash: `0x${string}`;
 };
+
+// Types for modules API response
+export interface ModuleDeployment {
+  network: string;
+  chainId: number;
+  address: string;
+  networkName: string;
+  blockExplorer: string;
+}
+
+export interface ModuleInfo {
+  id: string;
+  name: string;
+  description: string;
+  supportedTokens: string[];
+  features: string[];
+  deployments: ModuleDeployment[];
+}
+
+export interface SupportedNetwork {
+  name: string;
+  chainId: number;
+  blockExplorer: string;
+}
+
+export interface ModulesResponse {
+  success: boolean;
+  modules: ModuleInfo[];
+  totalModules: number;
+  supportedNetworks: SupportedNetwork[];
+}

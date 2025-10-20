@@ -12,6 +12,7 @@ import {
   checkBalanceGreaterThan,
   getBalance,
 } from './utils/create-account';
+import { getModules } from './utils/modules-api';
 import {
   type SinglePaymentResult,
   type TransferWithAuthorizationResult,
@@ -26,6 +27,10 @@ import {
   type RegisterRequest,
   type AccountConfig,
   type SignedAccountConfig,
+  type ModuleInfo,
+  type ModuleDeployment,
+  type ModulesResponse,
+  type SupportedNetwork,
 } from './types/account-types';
 import {
   checkPaymentStatus as checkPaymentStatusUtil,
@@ -136,6 +141,7 @@ export {
   getRecipientAccountData,
   checkBalanceGreaterThan,
   getBalance,
+  getModules,
   // Registration prep (no network)
   generatePrivacyKeys,
   buildEnsData,
@@ -160,4 +166,8 @@ export type {
   RegisterRequest,
   AccountConfig,
   SignedAccountConfig,
+  ModuleInfo,
+  ModuleDeployment,
+  ModulesResponse,
+  SupportedNetwork,
 };
