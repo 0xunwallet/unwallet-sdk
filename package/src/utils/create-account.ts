@@ -11,6 +11,7 @@ import { publicClintByChainId } from './chains-constants';
 import { generateInitialKeysOnClient } from './stealth-address';
 import { privateKeyToAccount } from 'viem/accounts';
 import { SERVER_URL_ENS } from './constants';
+import { generateModulesForRegistration, type ModuleUserInput } from './module-generator';
 
 export const signAccountConfig = async (config: AccountConfig): Promise<SignedAccountConfig> => {
   const configMessage = {
@@ -43,6 +44,7 @@ export const getApiKey = async (
   config: AccountConfig | SignedAccountConfig,
   {
     agentDetails,
+    moduleUserInputs,
   }: {
     agentDetails: {
       email: string;
@@ -53,6 +55,7 @@ export const getApiKey = async (
       telegram: string;
       discord: string;
     };
+    moduleUserInputs?: ModuleUserInput[];
   },
 ) => {
   // const isSufficentBalance = await checkBalanceGreaterThan(config, parseUnits('0.001', 6));
@@ -86,6 +89,27 @@ export const getApiKey = async (
     console.log('spendingPublicKey', spendingPublicKey);
   }
 
+  // Generate modules for registration if provided
+  let generatedModules: Array<{ address: string; chainId: string; data: string }> = [];
+  if (moduleUserInputs && moduleUserInputs.length > 0) {
+    try {
+      console.log('Generating modules for registration...');
+      const moduleResult = await generateModulesForRegistration(moduleUserInputs);
+      generatedModules = moduleResult.modules;
+
+      if (moduleResult.errors.length > 0) {
+        console.warn('Module generation warnings:', moduleResult.errors);
+      }
+
+      console.log(`Successfully generated ${generatedModules.length} modules for registration`);
+    } catch (error) {
+      console.error('Error generating modules:', error);
+      throw new Error(
+        `Failed to generate modules: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
   //ens sign
   const nameData: EnsData = {
     ensUsername: config.ens,
@@ -113,7 +137,7 @@ export const getApiKey = async (
   const registrationData = {
     ensData: nameData,
     supportedChains: [config.chainId.toString()],
-    modules: config.modules,
+    modules: generatedModules.length > 0 ? (generatedModules as any) : config.modules,
     privacyEnabled: config.needPrivacy ?? false,
     privacyData:
       (config.needPrivacy ?? false)
@@ -137,7 +161,7 @@ export const getApiKey = async (
   } = {
     ensData: nameData,
     supportedChains: [config.chainId.toString()] as unknown as RegisterRequest['supportedChains'],
-    modules: config.modules,
+    modules: generatedModules.length > 0 ? (generatedModules as any) : config.modules,
     privacyEnabled: config.needPrivacy ?? false,
     eigenAiEnabled: config.eigenAiEnabled ?? false,
     signature: {

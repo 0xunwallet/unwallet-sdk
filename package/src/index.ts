@@ -14,6 +14,13 @@ import {
 } from './utils/create-account';
 import { getModules } from './utils/modules-api';
 import {
+  generateModulesForRegistration,
+  getAvailableModules,
+  validateModuleInputs,
+  type ModuleUserInput,
+  type ModuleGenerationResult,
+} from './utils/module-generator';
+import {
   type SinglePaymentResult,
   type TransferWithAuthorizationResult,
   type TransferWithAuthorizationData,
@@ -37,6 +44,7 @@ import {
   type ModuleFormat,
   type ExampleRequest,
   type InstallationGuide,
+  type RegistrationModule,
 } from './types/account-types';
 import {
   checkPaymentStatus as checkPaymentStatusUtil,
@@ -148,6 +156,9 @@ export {
   checkBalanceGreaterThan,
   getBalance,
   getModules,
+  generateModulesForRegistration,
+  getAvailableModules,
+  validateModuleInputs,
   // Registration prep (no network)
   generatePrivacyKeys,
   buildEnsData,
@@ -182,4 +193,7 @@ export type {
   ModuleFormat,
   ExampleRequest,
   InstallationGuide,
+  RegistrationModule,
+  ModuleUserInput,
+  ModuleGenerationResult,
 };

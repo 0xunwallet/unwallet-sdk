@@ -135,3 +135,10 @@ export interface ModulesResponse {
   modules: ModuleInfo[];
   installationGuide: InstallationGuide;
 }
+
+// Module format for registration (different from the existing Module interface)
+export interface RegistrationModule {
+  address: string;
+  chainId: string;
+  data: string;
+}

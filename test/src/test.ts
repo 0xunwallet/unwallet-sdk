@@ -14,6 +14,7 @@ const runAllTests = async () => {
     const { testGetRecipientAccountData } = await import("./test-recipient-account.js");
     const { testGetApiKey } = await import("./test-get-api-key.js");
     const { testGetModules } = await import("./test-modules.js");
+    const { testModuleGeneration } = await import("./test-module-generation.js");
 
     // Test 1: Stealth Address Generation
     console.log("=".repeat(50));
@@ -56,6 +57,12 @@ const runAllTests = async () => {
     console.log("TEST 7: Get Modules");
     console.log("=".repeat(50));
     await testGetModules();
+
+    // Test 8: Module Generation
+    console.log("\n" + "=".repeat(50));
+    console.log("TEST 8: Module Generation");
+    console.log("=".repeat(50));
+    await testModuleGeneration();
 
     console.log("\n" + "=".repeat(50));
     console.log("✅ All tests completed!");

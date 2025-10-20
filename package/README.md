@@ -25,9 +25,13 @@ import {
   checkPaymentStatus,
   pollPaymentStatus,
   getModules,
+  generateModulesForRegistration,
+  getAvailableModules,
+  validateModuleInputs,
   type StealthAddressResponse,
   type PaymentStatus,
-  type ModulesResponse
+  type ModulesResponse,
+  type ModuleUserInput
 } from 'unwallet';
 import { createWalletClient, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -91,6 +95,35 @@ modules.modules.forEach((module) => {
   console.log('Required fields:', module.userInputs.requiredFields);
   console.log('Supported tokens:', module.userInputs.supportedTokens);
   console.log('Deployments:', module.deployments);
+});
+
+// Generate modules for registration
+const userModuleInputs: ModuleUserInput[] = [
+  {
+    moduleId: 'autoEarn',
+    chainId: 421614,
+    inputs: {
+      chainId: 421614,
+      tokenAddress: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d'
+    }
+  }
+];
+
+const registrationModules = await generateModulesForRegistration(userModuleInputs);
+console.log('Generated modules for registration:', registrationModules.modules);
+
+// Use modules in account registration
+const apiKeyResult = await getApiKey(accountConfig, {
+  agentDetails: {
+    email: 'user@example.com',
+    website: 'https://example.com',
+    description: 'My wallet',
+    twitter: '@username',
+    github: 'username',
+    telegram: 'username',
+    discord: 'username#1234',
+  },
+  moduleUserInputs: userModuleInputs, // Pass module inputs here
 });
 ```
 
@@ -194,6 +227,126 @@ modules.modules.forEach((module) => {
 // Access installation guide
 console.log('Module format:', modules.installationGuide.moduleFormat.interface);
 console.log('Example requests:', modules.installationGuide.exampleRequests);
+```
+
+### `generateModulesForRegistration(userModuleInputs)`
+
+Generates module JSON format for account registration from user-friendly inputs.
+
+**Parameters:**
+
+- `userModuleInputs` - Array of module user inputs:
+  - `moduleId` - Module identifier (e.g., 'autoEarn', 'autoSwap')
+  - `chainId` - Blockchain chain ID where the module is deployed
+  - `inputs` - User inputs matching the module's required fields
+
+**Returns:**
+
+- `ModuleGenerationResult` - Object containing:
+  - `modules` - Array of formatted modules ready for registration
+  - `errors` - Array of any validation or generation errors
+
+**Example:**
+
+```typescript
+const userModuleInputs: ModuleUserInput[] = [
+  {
+    moduleId: 'autoEarn',
+    chainId: 421614,
+    inputs: {
+      chainId: 421614,
+      tokenAddress: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+    },
+  },
+  {
+    moduleId: 'autoSwap',
+    chainId: 421614,
+    inputs: {
+      chainId: 421614,
+      defaultTokenAddress: '0x4200000000000000000000000000000000000006',
+    },
+  },
+];
+
+const result = await generateModulesForRegistration(userModuleInputs);
+console.log('Generated modules:', result.modules);
+if (result.errors.length > 0) {
+  console.log('Errors:', result.errors);
+}
+```
+
+### `getAvailableModules()`
+
+Gets a simplified list of available modules with their requirements.
+
+**Returns:**
+
+- `ModuleInfo[]` - Array of available modules with their details
+
+### `validateModuleInputs(moduleId, userInputs)`
+
+Validates user inputs against module requirements before generation.
+
+**Parameters:**
+
+- `moduleId` - Module identifier to validate against
+- `userInputs` - User inputs to validate
+
+**Returns:**
+
+- `{valid: boolean, errors: string[]}` - Validation result with any errors
+
+### `getApiKey(config, options)`
+
+Creates an account and gets an API key for the Unwallet service. Now supports automatic module generation.
+
+**Parameters:**
+
+- `config` - Account configuration:
+  - `walletClient` - Viem wallet client instance
+  - `publicClient` - Viem public client instance
+  - `chainId` - Chain ID
+  - `ens` - ENS username
+  - `modules` - Array of modules (can be empty if using moduleUserInputs)
+  - `defaultToken` - Default token address
+  - `needPrivacy` - Enable privacy features (optional)
+  - `eigenAiEnabled` - Enable Eigen AI features (optional)
+- `options` - Configuration options:
+  - `agentDetails` - Agent information (email, website, description, social links)
+  - `moduleUserInputs` - Array of module user inputs (optional)
+
+**Returns:**
+
+- Object containing:
+  - `apiKey` - Generated API key
+  - `ensCall` - ENS registration response
+  - `signature` - Account configuration signature
+  - `configHash` - Configuration hash
+
+**Example with modules:**
+
+```typescript
+const result = await getApiKey(accountConfig, {
+  agentDetails: {
+    email: 'user@example.com',
+    website: 'https://example.com',
+    description: 'My wallet with AutoEarn',
+    twitter: '@username',
+    github: 'username',
+    telegram: 'username',
+    discord: 'username#1234',
+  },
+  moduleUserInputs: [
+    {
+      moduleId: 'autoEarn',
+      chainId: 421614,
+      inputs: {
+        chainId: 421614,
+        tokenAddress: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+      },
+    },
+  ],
+});
 ```
 
 ## License
