@@ -1,11 +1,24 @@
 import { arbitrumSepolia, baseSepolia } from 'viem/chains';
 import { SupportedChain } from '../types/supported-chains';
+import { type Abi } from 'viem';
 
 export const BACKEND_URL = 'https://unwallet-production.up.railway.app';
 
 export const FACILITATOR_URL = 'https://arbsep.facilitator.unwallet.me';
 
 export const SERVER_URL_ENS = 'https://tee.wall8.xyz';
+
+type ModuleConfig = {
+  abi: Abi; // or unknown[] or readonly unknown[]
+  contractAddress: string;
+};
+
+export const MODULE_DATA = {
+  [baseSepolia.id as SupportedChain]: {
+    abi: [],
+    contractAddress: '0x....',
+  },
+} as const satisfies Partial<Record<SupportedChain, ModuleConfig>>;
 
 export const getStealthAddressGenerationMessage = (chainId: SupportedChain) => {
   switch (chainId) {
