@@ -17,9 +17,17 @@ export const getModuleData = async (
       functionName: 'getData',
     });
 
-    // read init data from module data and return init data
+    // read init data from module
+    // return required data :  requiredData = { BSMAddress, initData.tokenAddress, initData.chainId }
 
-    return moduleData;
+    console.log('moduleData', moduleData);
+
+    const requiredData = {
+      BSMAddress: '0xRequiredBSMAddress',
+      tokenAddress: '0xRequiredTokenAddress',
+      chainId: '0xRequiredChainId',
+    };
+    return requiredData;
   } catch (error) {
     console.error('Error fetching module data:', error);
     throw error;
