@@ -61,6 +61,9 @@ import {
   prepareRegisterRequest,
   prettyPrintRegisterRequest,
 } from './utils/registration-prep';
+import { getRequiredState } from './get-required-data';
+import { createOrchestrationData } from './utils/create-orchestration-data';
+import type { OrchestrationData, CurrentState, RequiredState } from './types/orchestration-data';
 
 export const createStealthAddress = async ({
   username,
@@ -159,6 +162,8 @@ export {
   generateModulesForRegistration,
   getAvailableModules,
   validateModuleInputs,
+  getRequiredState,
+  createOrchestrationData,
   // Registration prep (no network)
   generatePrivacyKeys,
   buildEnsData,
@@ -196,4 +201,7 @@ export type {
   RegistrationModule,
   ModuleUserInput,
   ModuleGenerationResult,
+  OrchestrationData,
+  CurrentState,
+  RequiredState,
 };

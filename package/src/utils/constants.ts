@@ -1,6 +1,6 @@
 import { arbitrumSepolia, baseSepolia } from 'viem/chains';
 import { SupportedChain } from '../types/supported-chains';
-import { type Abi } from 'viem';
+import { type Address, type Abi } from 'viem';
 
 export const BACKEND_URL = 'https://unwallet-production.up.railway.app';
 
@@ -10,15 +10,28 @@ export const SERVER_URL_ENS = 'https://tee.wall8.xyz';
 
 type ModuleConfig = {
   abi: Abi; // or unknown[] or readonly unknown[]
-  contractAddress: string;
+  bondContractAddress: Address;
 };
 
 export const MODULE_DATA = {
   [baseSepolia.id as SupportedChain]: {
     abi: [],
-    contractAddress: '0x....',
+    bondContractAddress: '0x....',
+  },
+  [arbitrumSepolia.id as SupportedChain]: {
+    abi: [],
+    bondContractAddress: '0x....',
   },
 } as const satisfies Partial<Record<SupportedChain, ModuleConfig>>;
+
+export const getModuleAddress = (moduleName: string, chainId: SupportedChain) => {
+  switch (moduleName) {
+    case 'BOND':
+      return MODULE_DATA[chainId].bondContractAddress;
+    default:
+      throw new Error('Invalid module name');
+  }
+};
 
 export const getStealthAddressGenerationMessage = (chainId: SupportedChain) => {
   switch (chainId) {

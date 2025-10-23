@@ -15,6 +15,8 @@ const runAllTests = async () => {
     const { testGetApiKey } = await import("./test-get-api-key.js");
     const { testGetModules } = await import("./test-modules.js");
     const { testModuleGeneration } = await import("./test-module-generation.js");
+    const { testGetRequiredState } = await import("./test-get-required-state.js");
+    const { testCreateOrchestrationData } = await import("./test-create-orchestration-data.js");
 
     // Test 1: Stealth Address Generation
     console.log("=".repeat(50));
@@ -63,6 +65,18 @@ const runAllTests = async () => {
     console.log("TEST 8: Module Generation");
     console.log("=".repeat(50));
     await testModuleGeneration();
+
+    // Test 9: Get Required State
+    console.log("\n" + "=".repeat(50));
+    console.log("TEST 9: Get Required State");
+    console.log("=".repeat(50));
+    await testGetRequiredState();
+
+    // Test 10: Create Orchestration Data
+    console.log("\n" + "=".repeat(50));
+    console.log("TEST 10: Create Orchestration Data");
+    console.log("=".repeat(50));
+    await testCreateOrchestrationData();
 
     console.log("\n" + "=".repeat(50));
     console.log("✅ All tests completed!");
