@@ -63,7 +63,9 @@ import {
 } from './utils/registration-prep';
 import { getRequiredState } from './get-required-data';
 import { createOrchestrationData } from './utils/create-orchestration-data';
+import { deposit, depositFromOrchestrationData } from './utils/deposit';
 import type { OrchestrationData, CurrentState, RequiredState } from './types/orchestration-data';
+import type { DepositResult } from './utils/deposit';
 
 export const createStealthAddress = async ({
   username,
@@ -164,6 +166,8 @@ export {
   validateModuleInputs,
   getRequiredState,
   createOrchestrationData,
+  deposit,
+  depositFromOrchestrationData,
   // Registration prep (no network)
   generatePrivacyKeys,
   buildEnsData,
@@ -204,4 +208,5 @@ export type {
   OrchestrationData,
   CurrentState,
   RequiredState,
+  DepositResult,
 };
