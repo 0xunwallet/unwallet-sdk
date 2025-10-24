@@ -41,6 +41,7 @@ export const getRequiredState = async ({
       return {
         chainId: sourceChainId.toString(),
         moduleName: moduleName,
+        moduleAddress: getModuleAddress(moduleName, sourceChainId),
         configInputType: 'tuple[](uint256 chainId, address tokenAddress)',
         requiredFields: fixedFields,
         configTemplate: fixedConfigTemplate,
@@ -113,6 +114,7 @@ export const getRequiredState = async ({
     const requiredData: RequiredStateData = {
       chainId: sourceChainId.toString(),
       moduleName: moduleName,
+      moduleAddress: getModuleAddress(moduleName, sourceChainId),
       configInputType: configInputTypeData as string,
       requiredFields: fields,
       configTemplate: readableFormat,

@@ -20,6 +20,7 @@ export interface ConfigField {
 export interface RequiredStateData {
   chainId: string;
   moduleName: ModuleName;
+  moduleAddress: string;
   configInputType: string;
   requiredFields: ConfigField[];
   configTemplate: Record<string, string | number | null>;
