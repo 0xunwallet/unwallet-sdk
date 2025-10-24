@@ -8,28 +8,64 @@ export const FACILITATOR_URL = 'https://arbsep.facilitator.unwallet.me';
 
 export const SERVER_URL_ENS = 'https://tee.wall8.xyz';
 
+// AAVE Pool Addresses (vault addresses for all modules)
+export const AAVE_POOL_ADDRESSES = {
+  [baseSepolia.id]: '0x07eA79F68B2B3df564D0A34F8e19D9B1e339814b',
+  [arbitrumSepolia.id]: '0xBfC91D59fdAA134A4ED45f7B584cAf96D7792Eff',
+} as const;
+
 type ModuleConfig = {
   abi: Abi; // or unknown[] or readonly unknown[]
   bondContractAddress: Address;
+  autoEarnContractAddress: Address;
+  autoSwapContractAddress: Address;
+  autoBridgeContractAddress: Address;
 };
+
+export const BOND_ABI = [
+  {
+    name: 'getConfigInputTypeData',
+    type: 'function',
+    stateMutability: 'pure',
+    inputs: [],
+    outputs: [
+      {
+        name: 'configInputTypeData',
+        type: 'string',
+      },
+    ],
+  },
+];
 
 export const MODULE_DATA = {
   [baseSepolia.id as SupportedChain]: {
-    abi: [],
-    bondContractAddress: '0x....',
+    abi: BOND_ABI,
+    bondContractAddress: '0x6e1fAc6e36f01615ef0c0898Bf6c5F260Bf2609a', // autoEarn on Base Sepolia
+    autoEarnContractAddress: '0x6e1fAc6e36f01615ef0c0898Bf6c5F260Bf2609a',
+    autoSwapContractAddress: '0x564B1354Af4D3EA51eE3a9eFaD608E9aa78d3905',
+    autoBridgeContractAddress: '0xe8Da54c7056680FF1b7FF6E9dfD0721dDcAd3F14',
   },
   [arbitrumSepolia.id as SupportedChain]: {
-    abi: [],
-    bondContractAddress: '0x....',
+    abi: BOND_ABI,
+    bondContractAddress: '0x748Cb019ffF904482e8518124F2BbFF0Ea7Ec7d6', // autoEarn on Arbitrum Sepolia
+    autoEarnContractAddress: '0x748Cb019ffF904482e8518124F2BbFF0Ea7Ec7d6',
+    autoSwapContractAddress: '0x537a0aB5A0172E69EC824cD1048A57eca95c696B',
+    autoBridgeContractAddress: '0xDdAd6d1084fF9e8CaBf579358A95666Bf5515F51',
   },
 } as const satisfies Partial<Record<SupportedChain, ModuleConfig>>;
 
 export const getModuleAddress = (moduleName: string, chainId: SupportedChain) => {
-  switch (moduleName) {
+  switch (moduleName.toUpperCase()) {
+    case 'AUTOEARN':
+      return MODULE_DATA[chainId].autoEarnContractAddress;
+    case 'AUTOSWAP':
+      return MODULE_DATA[chainId].autoSwapContractAddress;
+    case 'AUTOBRIDGE':
+      return MODULE_DATA[chainId].autoBridgeContractAddress;
     case 'BOND':
       return MODULE_DATA[chainId].bondContractAddress;
     default:
-      throw new Error('Invalid module name');
+      throw new Error(`Invalid module name: ${moduleName}`);
   }
 };
 

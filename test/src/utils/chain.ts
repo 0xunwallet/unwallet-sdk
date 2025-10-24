@@ -1,6 +1,6 @@
-import { arbitrumSepolia } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 
-export const currentChain = arbitrumSepolia;
+export const currentChain = baseSepolia;
 
 export const getTokenAddress = (chainId: number) => {
   switch (chainId) {
