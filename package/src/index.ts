@@ -70,6 +70,7 @@ import {
   prettyPrintRegisterRequest,
 } from './utils/registration-prep';
 import { getRequiredState } from './get-required-data';
+import { getRequiredAvailableModules } from './utils/constants';
 import { createOrchestrationData } from './utils/create-orchestration-data';
 import { deposit, depositFromOrchestrationData } from './utils/deposit';
 import type { OrchestrationData, CurrentState, RequiredState } from './types/orchestration-data';
@@ -171,6 +172,7 @@ export {
   getModules,
   generateModulesForRegistration,
   getAvailableModules,
+  getRequiredAvailableModules,
   validateModuleInputs,
   getRequiredState,
   createOrchestrationData,

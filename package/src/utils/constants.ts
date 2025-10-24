@@ -54,8 +54,16 @@ export const MODULE_DATA = {
   },
 } as const satisfies Partial<Record<SupportedChain, ModuleConfig>>;
 
+export const AVAILABLE_MODULES = ['AUTOEARN', 'AUTOSWAP', 'AUTOBRIDGE', 'BOND'] as const;
+
+export const getRequiredAvailableModules = (): readonly string[] => {
+  return AVAILABLE_MODULES;
+};
+
 export const getModuleAddress = (moduleName: string, chainId: SupportedChain) => {
-  switch (moduleName.toUpperCase()) {
+  const upperModuleName = moduleName.toUpperCase();
+
+  switch (upperModuleName) {
     case 'AUTOEARN':
       return MODULE_DATA[chainId].autoEarnContractAddress;
     case 'AUTOSWAP':
