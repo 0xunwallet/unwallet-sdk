@@ -12,6 +12,41 @@ export const getRequiredState = async ({
   publicClient,
 }: GetRequiredStateInput): Promise<RequiredStateData> => {
   try {
+    // Handle fixed fields for INVEST_IN_VERIFIABLE_AGENTS and INVEST_IN_AAVE modules
+    if (moduleName === 'INVEST_IN_VERIFIABLE_AGENTS' || moduleName === 'INVEST_IN_AAVE') {
+      // Get token address based on chain ID
+      const getTokenAddress = (chainId: number) => {
+        switch (chainId) {
+          case 84532: // Base Sepolia
+            return '0x036cbd53842c5426634e7929541ec2318f3dcf7e';
+          case 421614: // Arbitrum Sepolia
+            return '0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d';
+          default:
+            return '0x0000000000000000000000000000000000000000'; // Default placeholder
+        }
+      };
+
+      const tokenAddress = getTokenAddress(sourceChainId);
+
+      const fixedFields: ConfigField[] = [
+        { type: 'uint256', name: 'chainId' },
+        { type: 'address', name: 'tokenAddress' },
+      ];
+
+      const fixedConfigTemplate = {
+        chainId: sourceChainId.toString(),
+        tokenAddress: tokenAddress,
+      };
+
+      return {
+        chainId: sourceChainId.toString(),
+        moduleName: moduleName,
+        configInputType: 'tuple[](uint256 chainId, address tokenAddress)',
+        requiredFields: fixedFields,
+        configTemplate: fixedConfigTemplate,
+      };
+    }
+
     const client = publicClient ?? publicClintByChainId(sourceChainId);
 
     // Check if ABI is available and has the required function

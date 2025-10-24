@@ -2,7 +2,13 @@ import type { PublicClient } from 'viem';
 import { type SupportedChain } from './supported-chains';
 
 // Available module names
-export type ModuleName = 'AUTOEARN' | 'AUTOSWAP' | 'AUTOBRIDGE' | 'BOND';
+export type ModuleName =
+  | 'AUTOEARN'
+  | 'AUTOSWAP'
+  | 'AUTOBRIDGE'
+  | 'BOND'
+  | 'INVEST_IN_VERIFIABLE_AGENTS'
+  | 'INVEST_IN_AAVE';
 
 // Field type definitions
 export interface ConfigField {
@@ -32,6 +38,8 @@ export const AVAILABLE_MODULES: readonly ModuleName[] = [
   'AUTOSWAP',
   'AUTOBRIDGE',
   'BOND',
+  'INVEST_IN_VERIFIABLE_AGENTS',
+  'INVEST_IN_AAVE',
 ] as const;
 
 // Helper type for module validation

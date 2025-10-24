@@ -26,6 +26,16 @@ export const createOrchestrationData = async (
     const sourceTokenAmount = parseEther(currentState.tokenAmount);
     const destinationTokenAmount = parseEther('0'); // Default to 0 since requiredState doesn't have tokenAmount
 
+    // Extract destination token address from configTemplate if available
+    // Look for common token address field names in the config template
+    const tokenAddressField =
+      requiredState.configTemplate.sourceTokenAddress ||
+      requiredState.configTemplate.destinationTokenAddress ||
+      requiredState.configTemplate.tokenAddress;
+
+    const destinationTokenAddress =
+      (tokenAddressField as Address) || ('0x0000000000000000000000000000000000000000' as Address);
+
     // Create orchestration data structure
     const orchestrationData: OrchestrationData = {
       requestId,
@@ -35,21 +45,13 @@ export const createOrchestrationData = async (
       destinationChainId: parseInt(requiredState.chainId),
       sourceTokenAddress: currentState.tokenAddress,
       sourceTokenAmount,
-      destinationTokenAddress: requiredState.tokenAddress as Address,
+      destinationTokenAddress,
       destinationTokenAmount,
       accountAddressOnSourceChain: '0x0000000000000000000000000000000000000000' as Address, // Will be computed by server
       sourceChainAccountModules: [], // Will be provided by server for SC (SWAP, CROSS)
       accountAddressOnDestinationChain: '0x0000000000000000000000000000000000000000' as Address, // Will be computed by server
       destinationChainAccountModules: [], // Will be provided by server for DC (BOND)
     };
-
-    console.log('Created orchestration data:', {
-      requestId,
-      sourceChainId: orchestrationData.sourceChainId,
-      destinationChainId: orchestrationData.destinationChainId,
-      sourceTokenAmount: orchestrationData.sourceTokenAmount.toString(),
-      destinationTokenAmount: orchestrationData.destinationTokenAmount.toString(),
-    });
 
     return orchestrationData;
   } catch (error) {

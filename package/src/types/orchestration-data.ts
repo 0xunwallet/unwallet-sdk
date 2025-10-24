@@ -25,7 +25,12 @@ export interface CurrentState {
 }
 
 export interface RequiredState {
-  BSMAddress: string;
-  tokenAddress: string;
   chainId: string;
+  moduleName: string;
+  configInputType: string;
+  requiredFields: Array<{
+    type: string;
+    name: string;
+  }>;
+  configTemplate: Record<string, string | number | null>;
 }

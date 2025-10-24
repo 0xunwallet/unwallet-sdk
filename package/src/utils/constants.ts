@@ -44,6 +44,8 @@ export const MODULE_DATA = {
     autoEarnContractAddress: '0x6e1fAc6e36f01615ef0c0898Bf6c5F260Bf2609a',
     autoSwapContractAddress: '0x564B1354Af4D3EA51eE3a9eFaD608E9aa78d3905',
     autoBridgeContractAddress: '0xe8Da54c7056680FF1b7FF6E9dfD0721dDcAd3F14',
+    investInVerifiableAgentsContractAddress: '0xVerifiableAgentsContractAddress',
+    investInAaveContractAddress: '0xAaveContractAddress',
   },
   [arbitrumSepolia.id as SupportedChain]: {
     abi: BOND_ABI,
@@ -51,10 +53,19 @@ export const MODULE_DATA = {
     autoEarnContractAddress: '0x748Cb019ffF904482e8518124F2BbFF0Ea7Ec7d6',
     autoSwapContractAddress: '0x537a0aB5A0172E69EC824cD1048A57eca95c696B',
     autoBridgeContractAddress: '0xDdAd6d1084fF9e8CaBf579358A95666Bf5515F51',
+    investInVerifiableAgentsContractAddress: '0xVerifiableAgentsContractAddress',
+    investInAaveContractAddress: '0xAaveContractAddress',
   },
 } as const satisfies Partial<Record<SupportedChain, ModuleConfig>>;
 
-export const AVAILABLE_MODULES = ['AUTOEARN', 'AUTOSWAP', 'AUTOBRIDGE', 'BOND'] as const;
+export const AVAILABLE_MODULES = [
+  'AUTOEARN',
+  'AUTOSWAP',
+  'AUTOBRIDGE',
+  'BOND',
+  'INVEST_IN_VERIFIABLE_AGENTS',
+  'INVEST_IN_AAVE',
+] as const;
 
 export const getRequiredAvailableModules = (): readonly string[] => {
   return AVAILABLE_MODULES;
@@ -72,6 +83,10 @@ export const getModuleAddress = (moduleName: string, chainId: SupportedChain) =>
       return MODULE_DATA[chainId].autoBridgeContractAddress;
     case 'BOND':
       return MODULE_DATA[chainId].bondContractAddress;
+    case 'INVEST_IN_VERIFIABLE_AGENTS':
+      return MODULE_DATA[chainId].investInVerifiableAgentsContractAddress;
+    case 'INVEST_IN_AAVE':
+      return MODULE_DATA[chainId].investInAaveContractAddress;
     default:
       throw new Error(`Invalid module name: ${moduleName}`);
   }
