@@ -1,13 +1,16 @@
-import { type Address, type PublicClient } from 'viem';
-import { type SupportedChain } from './types/supported-chains';
+import {
+  type RequiredStateData,
+  type ConfigField,
+  type GetRequiredStateInput,
+} from './types/module-types';
 import { publicClintByChainId } from './utils/chains-constants';
 import { getModuleAddress, MODULE_DATA, AAVE_POOL_ADDRESSES } from './utils/constants';
 
-export const getRequiredState = async (
-  sourceChainId: SupportedChain,
-  moduleName: string,
-  publicClient?: PublicClient,
-) => {
+export const getRequiredState = async ({
+  sourceChainId,
+  moduleName,
+  publicClient,
+}: GetRequiredStateInput): Promise<RequiredStateData> => {
   try {
     const client = publicClient ?? publicClintByChainId(sourceChainId);
 
@@ -31,10 +34,10 @@ export const getRequiredState = async (
       }
 
       const fieldsString = tupleMatch[1];
-      const fields = fieldsString.split(',').map((field) => {
+      const fields: ConfigField[] = fieldsString.split(',').map((field) => {
         const parts = field.trim().split(' ');
         return {
-          type: parts[0],
+          type: parts[0] as ConfigField['type'],
           name: parts[1] || 'unknown',
         };
       });
@@ -72,10 +75,10 @@ export const getRequiredState = async (
 
     const { fields, readableFormat } = parseConfigInputType(configInputTypeData as string);
 
-    const requiredData = {
+    const requiredData: RequiredStateData = {
       chainId: sourceChainId.toString(),
       moduleName: moduleName,
-      configInputType: configInputTypeData,
+      configInputType: configInputTypeData as string,
       requiredFields: fields,
       configTemplate: readableFormat,
     };

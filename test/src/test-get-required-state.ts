@@ -11,13 +11,16 @@ export const testGetRequiredState = async () => {
     // Test 1: Test with valid parameters using default public client
     console.log("\n1. Testing with valid parameters (default public client)...");
 
-    const chainId = currentChain.id; 
+    const chainId = currentChain.id;
     const moduleName = "AUTOBRIDGE";
 
     console.log(`   Chain ID: ${chainId}`);
     console.log(`   Module Name: ${moduleName}`);
 
-    const result1 = await getRequiredState(chainId, moduleName);
+    const result1 = await getRequiredState({
+      sourceChainId: chainId,
+      moduleName: moduleName,
+    });
 
     console.log("✅ Successfully fetched required state:");
     console.log("   Result:", result1);

@@ -1,5 +1,13 @@
 import { CHAIN_MAPPING } from './utils/chains-constants';
 import { type SupportedChain } from './types/supported-chains';
+import {
+  type ModuleName,
+  type RequiredStateData,
+  type ConfigField,
+  type GetRequiredStateInput,
+  AVAILABLE_MODULES,
+  type ValidModuleName,
+} from './types/module-types';
 import { getStealthAddress } from './utils/stealth-address';
 import { getTransactions as fetchTransactions } from './utils/transaction-utils';
 import { type TransactionResult } from './types/withdrawal-data';
@@ -209,4 +217,11 @@ export type {
   CurrentState,
   RequiredState,
   DepositResult,
+  // Module types
+  ModuleName,
+  RequiredStateData,
+  ConfigField,
+  GetRequiredStateInput,
+  AVAILABLE_MODULES,
+  ValidModuleName,
 };
