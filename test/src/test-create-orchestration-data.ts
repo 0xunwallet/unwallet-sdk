@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
-import { createOrchestrationData, getRequiredState } from "unwallet";
+import { createOrchestrationData } from "unwallet";
 import { currentChain } from "./utils/chain.js";
-import type { CurrentState } from "unwallet";
+import type { CurrentState, RequiredState } from "unwallet";
 
 dotenv.config();
 
@@ -9,20 +9,34 @@ export const testCreateOrchestrationData = async () => {
   try {
     console.log("🔍 Testing createOrchestrationData function...");
 
-    // Get required state first
-    const requiredState = await getRequiredState(currentChain.id, "BOND");
+    // Create mock required state (bypassing getRequiredState to avoid RPC dependency)
+    const requiredState: RequiredState = {
+      chainId: "421614", // Arbitrum Sepolia
+      moduleName: "BOND",
+      configInputType: "tuple[](uint256 chainId, address tokenAddress)",
+      requiredFields: [
+        { type: "uint256", name: "chainId" },
+        { type: "address", name: "tokenAddress" },
+      ],
+      configTemplate: {
+        moduleAddress: "0x6e1fAc6e36f01615ef0c0898Bf6c5F260Bf2609a",
+        sourceTokenAddress: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
+        destinationTokenAddress: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
+        tokenAddress: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
+      },
+    };
     console.log("Required state:", requiredState);
 
     // Create current state
     const currentState: CurrentState = {
       chainId: currentChain.id,
-      tokenAddress: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
-      tokenAmount: "1.5",
+      tokenAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      tokenAmount: "100000",
       ownerAddress: "0x1234567890123456789012345678901234567890",
     };
 
-    const ownerAddress = "0x9876543210987654321098765432109876543210";
-    const apiKey = "test-api-key-12345";
+    const ownerAddress = "0x1234567890123456789012345678901234567890";
+    const apiKey = "test-api-key";
 
     // Test the function
     const orchestrationData = await createOrchestrationData(currentState, requiredState, ownerAddress, apiKey);

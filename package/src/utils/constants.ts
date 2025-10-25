@@ -7,6 +7,7 @@ export const BACKEND_URL = 'https://unwallet-production.up.railway.app';
 export const FACILITATOR_URL = 'https://arbsep.facilitator.unwallet.me';
 
 export const SERVER_URL_ENS = 'https://tee.wall8.xyz';
+// export const SERVER_URL_ENS = 'http://localhost:3000';
 
 // AAVE Pool Addresses (vault addresses for all modules)
 export const AAVE_POOL_ADDRESSES = {

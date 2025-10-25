@@ -5,6 +5,7 @@ import {
   type RequiredState,
 } from '../types/orchestration-data';
 import { type Address } from 'viem';
+import { SERVER_URL_ENS } from './constants';
 
 export const createOrchestrationData = async (
   currentState: CurrentState,
@@ -21,6 +22,49 @@ export const createOrchestrationData = async (
     );
 
     console.log('apiKey', apiKey);
+
+    // Prepare the API request payload
+    const apiRequestPayload = {
+      currentState: [
+        {
+          chainId: currentState.chainId,
+          tokenAddress: currentState.tokenAddress,
+          amount: currentState.tokenAmount,
+        },
+      ],
+      requiredStateData: [
+        {
+          moduleAddress:
+            requiredState.configTemplate.moduleAddress ||
+            '0x0000000000000000000000000000000000000000',
+          chainId: parseInt(requiredState.chainId),
+          encodedData: '0x', // Placeholder for encoded data
+        },
+      ],
+      userAddress: ownerAddress,
+      apiKey: apiKey,
+    };
+
+    console.log(
+      'Making API call to orchestration endpoint with payload:',
+      JSON.stringify(apiRequestPayload, null, 2),
+    );
+
+    // Make the API call to the orchestration endpoint
+    const response = await fetch(`${SERVER_URL_ENS}/api/v1/orchestration/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiRequestPayload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API call failed with status: ${response.status} - ${response.statusText}`);
+    }
+
+    const apiResult = await response.json();
+    console.log('API Response:', JSON.stringify(apiResult, null, 2));
 
     // Parse token amounts to bigint
     const sourceTokenAmount = parseEther(currentState.tokenAmount);
