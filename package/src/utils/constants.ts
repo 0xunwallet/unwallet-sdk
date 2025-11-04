@@ -50,8 +50,8 @@ export const MODULE_DATA = {
   },
   [arbitrumSepolia.id as SupportedChain]: {
     abi: BOND_ABI,
-    bondContractAddress: '0x748Cb019ffF904482e8518124F2BbFF0Ea7Ec7d6', // autoEarn on Arbitrum Sepolia
-    autoEarnContractAddress: '0x748Cb019ffF904482e8518124F2BbFF0Ea7Ec7d6',
+    bondContractAddress: '0x748Cb019ffF904482e8518124F2BbFF0Ea7Ec7d6',
+    autoEarnContractAddress: '0x42CF1b746F96D6cc59e84F87d26Ea64D3fbCa3a0', // Correct AutoEarn module address
     autoSwapContractAddress: '0x537a0aB5A0172E69EC824cD1048A57eca95c696B',
     autoBridgeContractAddress: '0xDdAd6d1084fF9e8CaBf579358A95666Bf5515F51',
     investInVerifiableAgentsContractAddress: '0xVerifiableAgentsContractAddress',

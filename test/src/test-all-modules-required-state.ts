@@ -52,13 +52,17 @@ export const testAllModulesRequiredState = async () => {
         console.log(`\n📋 Full Result:`);
         console.log(JSON.stringify(result, null, 2));
       } catch (error) {
-        console.log(`❌ Error: ${error.message}`);
-        console.log(`🔍 Error Details:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+        console.log(`❌ Error: ${errorMessage}`);
+        if (errorStack) {
+          console.log(`🔍 Stack Trace:`, errorStack);
+        }
 
         errors[moduleName] = {
           success: false,
-          error: error.message,
-          fullError: error,
+          error: errorMessage,
+          fullError: error instanceof Error ? error.stack : String(error),
         };
       }
     }
@@ -85,7 +89,8 @@ export const testAllModulesRequiredState = async () => {
     console.log(`\n1. Required Fields Comparison:`);
     const fieldAnalysis: Record<string, string[]> = {};
     for (const [moduleName, result] of Object.entries(results)) {
-      fieldAnalysis[moduleName] = result.data.requiredFields.map((f) => f.name);
+      // Explicitly type the field parameter as 'any'
+      fieldAnalysis[moduleName] = result.data.requiredFields.map((f: any) => f.name);
     }
 
     for (const [moduleName, fields] of Object.entries(fieldAnalysis)) {
@@ -134,15 +139,21 @@ export const testAllModulesRequiredState = async () => {
 };
 
 // Run the test if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  testAllModulesRequiredState()
-    .then((summary) => {
-      console.log("\n✅ Comprehensive test completed successfully!");
-      console.log(`📊 Final Summary: ${Object.keys(summary.results).length} successful, ${Object.keys(summary.errors).length} failed`);
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error("\n❌ Comprehensive test failed:", error);
-      process.exit(1);
-    });
-}
+(async () => {
+  try {
+    const summary = await testAllModulesRequiredState();
+    console.log("\n✅ Comprehensive test completed successfully!");
+    console.log(`📊 Final Summary: ${Object.keys(summary.results).length} successful, ${Object.keys(summary.errors).length} failed`);
+    process.exit(0);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("\n❌ Comprehensive test failed:");
+    console.error("Error message:", errorMessage);
+    if (errorStack) {
+      console.error("Stack trace:", errorStack);
+    }
+    console.error("Full error:", error);
+    process.exit(1);
+  }
+})();

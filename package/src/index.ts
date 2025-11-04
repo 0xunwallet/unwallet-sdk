@@ -73,8 +73,29 @@ import { getRequiredState } from './get-required-data';
 import { getRequiredAvailableModules } from './utils/constants';
 import { createOrchestrationData } from './utils/create-orchestration-data';
 import { deposit, depositFromOrchestrationData } from './utils/deposit';
+import {
+  notifyDeposit,
+  getOrchestrationStatus,
+  pollOrchestrationStatus,
+} from './utils/orchestration-utils';
+import {
+  transferToOrchestrationAccount,
+  executeOrchestration,
+  type ExecuteOrchestrationResult,
+} from './utils/orchestration-workflow';
+import {
+  encodeAutoEarnModuleData,
+  createAutoEarnConfig,
+  type AutoEarnConfig,
+} from './utils/encode-module-data';
 import type { OrchestrationData, CurrentState, RequiredState } from './types/orchestration-data';
 import type { DepositResult } from './utils/deposit';
+import type {
+  NotifyDepositParams,
+  NotifyDepositResponse,
+  OrchestrationStatus,
+  PollOrchestrationStatusOptions,
+} from './utils/orchestration-utils';
 
 export const createStealthAddress = async ({
   username,
@@ -178,6 +199,13 @@ export {
   createOrchestrationData,
   deposit,
   depositFromOrchestrationData,
+  notifyDeposit,
+  getOrchestrationStatus,
+  pollOrchestrationStatus,
+  transferToOrchestrationAccount,
+  executeOrchestration,
+  encodeAutoEarnModuleData,
+  createAutoEarnConfig,
   // Registration prep (no network)
   generatePrivacyKeys,
   buildEnsData,
@@ -219,6 +247,12 @@ export type {
   CurrentState,
   RequiredState,
   DepositResult,
+  NotifyDepositParams,
+  NotifyDepositResponse,
+  OrchestrationStatus,
+  PollOrchestrationStatusOptions,
+  ExecuteOrchestrationResult,
+  AutoEarnConfig,
   // Module types
   ModuleName,
   RequiredStateData,

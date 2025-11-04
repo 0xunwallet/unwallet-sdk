@@ -1,21 +1,20 @@
 import dotenv from "dotenv";
 import {
   createOrchestrationData,
+  transferToOrchestrationAccount,
   notifyDeposit,
-  getOrchestrationStatus,
   pollOrchestrationStatus,
-  depositFromOrchestrationData,
   getRequiredState,
+  encodeAutoEarnModuleData,
+  createAutoEarnConfig,
 } from "unwallet";
-import type { CurrentState, RequiredState, OrchestrationStatus } from "unwallet";
+import type { CurrentState, OrchestrationStatus } from "unwallet";
 import {
   createPublicClient,
   createWalletClient,
   http,
   parseUnits,
   formatUnits,
-  encodeAbiParameters,
-  keccak256,
 } from "viem";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { baseSepolia, arbitrumSepolia } from "viem/chains";
@@ -72,7 +71,7 @@ const NETWORKS = {
 const TEST_CONFIG = {
   // Amount to bridge (0.1 USDC)
   bridgeAmount: parseUnits("0.1", 6),
-  // API server URL - defaults to production server
+  // API server URL
   apiUrl: process.env.TEST_SERVER_URL || process.env.SERVER_URL || "https://tee.wall8.xyz",
   // API key for orchestration
   apiKey: process.env.API_KEY || "test-api-orchestration",
@@ -82,11 +81,11 @@ async function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export const testCreateOrchestrationData = async () => {
-  try {
-    console.log("🌉 API Orchestration Test: Base → Arbitrum USDC Bridge");
-    console.log("======================================================");
+async function testApiOrchestration() {
+  console.log("🌉 API Orchestration Test: Base → Arbitrum USDC Bridge");
+  console.log("======================================================");
 
+  try {
     // Check if server is running
     console.log("\n📡 Checking Server Status...");
     console.log("-----------------------------");
@@ -100,28 +99,26 @@ export const testCreateOrchestrationData = async () => {
       console.log(`   Available chains: ${chains.data.map((c) => c.name).join(", ")}`);
     } catch (error) {
       console.error("❌ Server is not running!");
-      console.error("   Please start the server or check SERVER_URL_ENS");
+      console.error("   Please start the server or check SERVER_URL");
       if (error instanceof Error) {
         console.error(`   Error: ${error.message}`);
       }
-      // Don't exit - continue with test but it will fail at API call
+      // Continue anyway - will fail at API call
     }
 
     // Setup accounts and clients
     console.log("\n🔐 Setting up Accounts");
     console.log("----------------------");
 
-    // Get private key from environment - prefer TEST_PRIVATE_KEY (relayer account with USDC)
+    // Get private key from environment - prefer TEST_PRIVATE_KEY which has USDC
     const privateKey = process.env.TEST_PRIVATE_KEY || process.env.PRIVATE_KEY;
     if (!privateKey) {
-      console.log("⚠️  TEST_PRIVATE_KEY or PRIVATE_KEY not set - skipping deposit and notification steps");
-      console.log("   Will only test orchestration data creation\n");
-      return await testOrchestrationCreationOnly();
+      throw new Error("TEST_PRIVATE_KEY or PRIVATE_KEY environment variable is required");
     }
 
-    // Create funding account (relayer account with USDC)
+    // Create funding account (TEE/relayer account with USDC)
     const fundingAccount = privateKeyToAccount(privateKey as Hex);
-    console.log(`💰 Funding Account (Relayer): ${fundingAccount.address}`);
+    console.log(`💰 Funding Account: ${fundingAccount.address}`);
 
     // Create random user account (will own the smart accounts)
     const userPrivateKey = generatePrivateKey();
@@ -157,53 +154,25 @@ export const testCreateOrchestrationData = async () => {
       );
     }
 
+    // Create orchestration request
+    console.log("\n🎯 Creating Orchestration Request");
+    console.log("---------------------------------");
+
     // Get required state for AutoEarn module
-    console.log("\n📊 Getting Required State");
-    console.log("--------------------------");
     const requiredState = await getRequiredState({
       sourceChainId: arbitrumSepolia.id,
       moduleName: "AUTOEARN",
     });
 
-    console.log("✅ Required state retrieved:");
-    console.log(`   Chain ID: ${requiredState.chainId}`);
-    console.log(`   Module: ${requiredState.moduleName}`);
-    console.log(`   Module Address: ${requiredState.moduleAddress}`);
-    console.log(`   Config Input Type: ${requiredState.configInputType}`);
-
-    // Create orchestration request
-    console.log("\n🎯 Creating Orchestration Request");
-    console.log("---------------------------------");
-
-    // Encode AutoEarn module data using the config hash approach
-    // The module expects a config hash encoded as uint256
-    const configData = encodeAbiParameters(
-      [
-        {
-          type: "tuple[]",
-          components: [
-            { name: "chainId", type: "uint256" },
-            { name: "token", type: "address" },
-            { name: "vault", type: "address" },
-          ],
-        },
-      ],
-      [
-        [
-          {
-            chainId: BigInt(421614), // Arbitrum Sepolia
-            token: NETWORKS.arbitrumSepolia.contracts.usdcToken,
-            vault: NETWORKS.arbitrumSepolia.contracts.aavePool,
-          },
-        ],
-      ],
+    // Encode AutoEarn module data using SDK helper functions
+    console.log("🔧 Encoding AutoEarn module configuration...");
+    const autoEarnConfig = createAutoEarnConfig(
+      421614, // Arbitrum Sepolia chain ID
+      NETWORKS.arbitrumSepolia.contracts.usdcToken,
+      NETWORKS.arbitrumSepolia.contracts.aavePool,
     );
-
-    // Calculate config hash
-    const configHash = keccak256(configData);
-
-    // Encode the config hash as uint256 (this is what the module expects during installation)
-    const encodedData = encodeAbiParameters([{ type: "uint256" }], [BigInt(configHash)]);
+    const encodedData = encodeAutoEarnModuleData([autoEarnConfig]);
+    console.log(`✅ Encoded AutoEarn config for chain ${autoEarnConfig.chainId}`);
 
     const currentState: CurrentState = {
       chainId: baseSepolia.id,
@@ -217,7 +186,8 @@ export const testCreateOrchestrationData = async () => {
     console.log(`   Target: Invest in Aave on Arbitrum`);
     console.log(`   User: ${userAccount.address}`);
 
-    // Create orchestration data
+    // Use SDK to create orchestration data
+    console.log("\n📤 Sending request to server...");
     const orchestrationData = await createOrchestrationData(
       currentState,
       requiredState,
@@ -236,21 +206,27 @@ export const testCreateOrchestrationData = async () => {
     console.log(`🔧 Source Modules: ${orchestrationData.sourceChainAccountModules.join(", ")}`);
     console.log(`🔧 Destination Modules: ${orchestrationData.destinationChainAccountModules.join(", ")}`);
 
-    // Transfer USDC to smart account
+    // Transfer USDC to smart account using SDK
     console.log("\n💸 Transferring USDC to Smart Account");
     console.log("-------------------------------------");
     console.log(`Amount: ${formatUnits(TEST_CONFIG.bridgeAmount, 6)} USDC`);
     console.log(`To: ${orchestrationData.accountAddressOnSourceChain}`);
 
-    const transferHash = await baseWalletClient.writeContract({
-      address: NETWORKS.baseSepolia.contracts.usdcToken,
-      abi: ERC20_ABI,
-      functionName: "transfer",
-      args: [orchestrationData.accountAddressOnSourceChain as Address, TEST_CONFIG.bridgeAmount],
-    });
+    const depositResult = await transferToOrchestrationAccount(
+      orchestrationData,
+      baseWalletClient,
+      baseClient,
+    );
+
+    if (!depositResult.success || !depositResult.txHash) {
+      throw new Error(`Transfer failed: ${depositResult.error || "Unknown error"}`);
+    }
 
     console.log("⏳ Waiting for confirmation...");
-    const receipt = await baseClient.waitForTransactionReceipt({ hash: transferHash });
+    const receipt = await baseClient.waitForTransactionReceipt({
+      hash: depositResult.txHash as Hex,
+    });
+
     console.log("✅ Transfer confirmed!");
     console.log(`   Tx Hash: ${receipt.transactionHash}`);
     console.log(`   Block: ${receipt.blockNumber}`);
@@ -265,7 +241,7 @@ export const testCreateOrchestrationData = async () => {
 
     console.log(`   Smart Account Balance: ${formatUnits(smartAccountBalance, 6)} USDC`);
 
-    // Notify server of deposit
+    // Notify server of deposit using SDK
     console.log("\n🔔 Notifying Server of Deposit");
     console.log("------------------------------");
     console.log(`Sending notification with requestId: ${orchestrationData.requestId}`);
@@ -278,20 +254,21 @@ export const testCreateOrchestrationData = async () => {
 
     console.log("✅ Server notified successfully!");
 
-    // Check orchestration status
+    // Check orchestration status using SDK
     console.log("\n📊 Checking Orchestration Status");
     console.log("--------------------------------");
-    console.log("Polling orchestration status...");
 
     try {
-      const finalStatus = await pollOrchestrationStatus({
+      await pollOrchestrationStatus({
         requestId: orchestrationData.requestId,
         interval: 3000,
         maxAttempts: 10,
         onStatusUpdate: (status: OrchestrationStatus) => {
           console.log(`\n[Status Update] Status: ${status.status}`);
           if (status.updated_at || status.created_at) {
-            console.log(`   Updated: ${new Date(status.updated_at || status.created_at || Date.now()).toLocaleString()}`);
+            console.log(
+              `   Updated: ${new Date(status.updated_at || status.created_at || Date.now()).toLocaleString()}`,
+            );
           }
           if (status.error_message) {
             console.log(`   Error: ${status.error_message}`);
@@ -305,11 +282,6 @@ export const testCreateOrchestrationData = async () => {
           console.log(`\n❌ Orchestration error: ${error.message}`);
         },
       });
-
-      console.log("\n✅ Final Status:", finalStatus.status);
-      if (finalStatus.error_message) {
-        console.log("   Error:", finalStatus.error_message);
-      }
     } catch (error) {
       console.log(`\n⚠️  Status polling completed or timed out`);
       if (error instanceof Error) {
@@ -335,79 +307,31 @@ export const testCreateOrchestrationData = async () => {
     console.log("   • Update status to COMPLETED");
     console.log("\n📌 Important URLs:");
     console.log(`   Status: ${TEST_CONFIG.apiUrl}/api/v1/orchestration/status/${orchestrationData.requestId}`);
-    console.log(`   Notifications: ${TEST_CONFIG.apiUrl}/api/v1/notifications/status/${orchestrationData.requestId}`);
+    console.log(
+      `   Notifications: ${TEST_CONFIG.apiUrl}/api/v1/notifications/status/${orchestrationData.requestId}`,
+    );
     console.log("\n✨ Test completed successfully!");
-
-    return orchestrationData;
-  } catch (error) {
+  } catch (error: any) {
     console.error("\n❌ Test Failed!");
     console.error("================");
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error("Error:", errorMessage);
-    if (errorStack) {
-      console.error("\nStack:", errorStack);
+    console.error("Error:", error.message);
+    if (error.stack) {
+      console.error("\nStack:", error.stack);
     }
     throw error;
   }
-};
-
-// Test orchestration creation only (without deposit)
-async function testOrchestrationCreationOnly() {
-  console.log("\n🔍 Testing createOrchestrationData function (creation only)...");
-
-  // Get required state
-  const requiredState = await getRequiredState({
-    sourceChainId: arbitrumSepolia.id,
-    moduleName: "AUTOEARN",
-  });
-
-  console.log("Required state:", {
-    chainId: requiredState.chainId,
-    moduleName: requiredState.moduleName,
-    moduleAddress: "moduleAddress" in requiredState ? requiredState.moduleAddress : "N/A",
-  });
-
-  // Create current state
-  const currentState: CurrentState = {
-    chainId: baseSepolia.id,
-    tokenAddress: NETWORKS.baseSepolia.contracts.usdcToken,
-    tokenAmount: parseUnits("0.1", 6).toString(),
-    ownerAddress: "0x1234567890123456789012345678901234567890" as Address,
-  };
-
-  const ownerAddress = "0x1234567890123456789012345678901234567890" as Address;
-  const apiKey = process.env.API_KEY || "test-api-key";
-
-  // Test the function
-  const orchestrationData = await createOrchestrationData(currentState, requiredState, ownerAddress, apiKey);
-
-  console.log("✅ Successfully created orchestration data:");
-  console.log("Request ID:", orchestrationData.requestId);
-  console.log("Source Chain ID:", orchestrationData.sourceChainId);
-  console.log("Destination Chain ID:", orchestrationData.destinationChainId);
-  console.log("Source Account:", orchestrationData.accountAddressOnSourceChain);
-  console.log("Destination Account:", orchestrationData.accountAddressOnDestinationChain);
-  console.log("Source Token Amount:", formatUnits(orchestrationData.sourceTokenAmount, 6), "USDC");
-
-  console.log("\n✅ Test completed successfully!");
-  return orchestrationData;
 }
 
-// Run the test if this file is executed directly
-(async () => {
-  try {
-    await testCreateOrchestrationData();
+// Run the test
+console.log("Starting API Orchestration Test...\n");
+
+testApiOrchestration()
+  .then(() => {
+    console.log("\n👍 Script execution completed");
     process.exit(0);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    console.error("\n❌ Test failed:");
-    console.error("Error message:", errorMessage);
-    if (errorStack) {
-      console.error("Stack trace:", errorStack);
-    }
-    console.error("Full error:", error);
+  })
+  .catch((error) => {
+    console.error("\n❌ Script execution failed:", error);
     process.exit(1);
-  }
-})();
+  });
+
