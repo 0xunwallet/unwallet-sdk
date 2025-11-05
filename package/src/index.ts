@@ -88,6 +88,18 @@ import {
   createAutoEarnConfig,
   type AutoEarnConfig,
 } from './utils/encode-module-data';
+import {
+  buildAutoEarnModule,
+  buildAutoSwapModule,
+  buildAutoBridgeModule,
+  buildModulesBatch,
+  validateModule,
+  type AutoEarnParams,
+  type AutoSwapParams,
+  type AutoBridgeParams,
+  type BuiltModule,
+  type ModuleBuilderConfig,
+} from './utils/module-builder-api';
 import type { OrchestrationData, CurrentState, RequiredState } from './types/orchestration-data';
 import type { DepositResult } from './utils/deposit';
 import type {
@@ -206,6 +218,11 @@ export {
   executeOrchestration,
   encodeAutoEarnModuleData,
   createAutoEarnConfig,
+  buildAutoEarnModule,
+  buildAutoSwapModule,
+  buildAutoBridgeModule,
+  buildModulesBatch,
+  validateModule,
   // Registration prep (no network)
   generatePrivacyKeys,
   buildEnsData,
@@ -253,6 +270,11 @@ export type {
   PollOrchestrationStatusOptions,
   ExecuteOrchestrationResult,
   AutoEarnConfig,
+  AutoEarnParams,
+  AutoSwapParams,
+  AutoBridgeParams,
+  BuiltModule,
+  ModuleBuilderConfig,
   // Module types
   ModuleName,
   RequiredStateData,

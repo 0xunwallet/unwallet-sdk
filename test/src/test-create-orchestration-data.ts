@@ -6,6 +6,9 @@ import {
   pollOrchestrationStatus,
   depositFromOrchestrationData,
   getRequiredState,
+  buildAutoEarnModule,
+  encodeAutoEarnModuleData,
+  createAutoEarnConfig,
 } from "unwallet";
 import type { CurrentState, RequiredState, OrchestrationStatus } from "unwallet";
 import {
@@ -14,8 +17,6 @@ import {
   http,
   parseUnits,
   formatUnits,
-  encodeAbiParameters,
-  keccak256,
 } from "viem";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
 import { baseSepolia, arbitrumSepolia } from "viem/chains";
@@ -78,9 +79,6 @@ const TEST_CONFIG = {
   apiKey: process.env.API_KEY || "test-api-orchestration",
 };
 
-async function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export const testCreateOrchestrationData = async () => {
   try {
@@ -175,35 +173,46 @@ export const testCreateOrchestrationData = async () => {
     console.log("\n🎯 Creating Orchestration Request");
     console.log("---------------------------------");
 
-    // Encode AutoEarn module data using the config hash approach
-    // The module expects a config hash encoded as uint256
-    const configData = encodeAbiParameters(
-      [
+    // Build AutoEarn module using server-side API (simpler - server handles encoding)
+    // If server API is not available, fall back to client-side encoding
+    console.log("🔧 Building AutoEarn module...");
+    let autoEarnModule;
+    let encodedData: string;
+    
+    try {
+      // Try server-side API first
+      autoEarnModule = await buildAutoEarnModule(
         {
-          type: "tuple[]",
-          components: [
-            { name: "chainId", type: "uint256" },
-            { name: "token", type: "address" },
-            { name: "vault", type: "address" },
-          ],
+          chainId: arbitrumSepolia.id,
+          tokenAddress: NETWORKS.arbitrumSepolia.contracts.usdcToken,
+          // vaultAddress is optional - server uses default Aave pool
         },
-      ],
-      [
-        [
-          {
-            chainId: BigInt(421614), // Arbitrum Sepolia
-            token: NETWORKS.arbitrumSepolia.contracts.usdcToken,
-            vault: NETWORKS.arbitrumSepolia.contracts.aavePool,
-          },
-        ],
-      ],
-    );
-
-    // Calculate config hash
-    const configHash = keccak256(configData);
-
-    // Encode the config hash as uint256 (this is what the module expects during installation)
-    const encodedData = encodeAbiParameters([{ type: "uint256" }], [BigInt(configHash)]);
+        {
+          baseUrl: TEST_CONFIG.apiUrl,
+        },
+      );
+      console.log(`✅ AutoEarn module built via server API: ${autoEarnModule.address}`);
+      console.log(`   Encoded data: ${autoEarnModule.data.substring(0, 20)}...`);
+      encodedData = autoEarnModule.data;
+    } catch (error) {
+      // Fall back to client-side encoding if server API is not available
+      console.log("⚠️  Server API not available, using client-side encoding...");
+      console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
+      
+      const { encodeAutoEarnModuleData, createAutoEarnConfig } = await import("unwallet");
+      const autoEarnConfig = createAutoEarnConfig(
+        arbitrumSepolia.id,
+        NETWORKS.arbitrumSepolia.contracts.usdcToken,
+        NETWORKS.arbitrumSepolia.contracts.aavePool,
+      );
+      encodedData = encodeAutoEarnModuleData([autoEarnConfig]);
+      autoEarnModule = {
+        address: requiredState.moduleAddress,
+        chainId: arbitrumSepolia.id,
+        data: encodedData,
+      };
+      console.log(`✅ AutoEarn module encoded client-side: ${autoEarnModule.address}`);
+    }
 
     const currentState: CurrentState = {
       chainId: baseSepolia.id,
@@ -217,13 +226,13 @@ export const testCreateOrchestrationData = async () => {
     console.log(`   Target: Invest in Aave on Arbitrum`);
     console.log(`   User: ${userAccount.address}`);
 
-    // Create orchestration data
+    // Create orchestration data using the built module
     const orchestrationData = await createOrchestrationData(
       currentState,
-      requiredState,
+      requiredState, // Use requiredState which has all the metadata
       userAccount.address,
       TEST_CONFIG.apiKey,
-      encodedData as Hex,
+      encodedData as Hex, // Use encoded data (from server or client)
     );
 
     console.log("\n✅ Orchestration Created Successfully!");
@@ -362,10 +371,36 @@ async function testOrchestrationCreationOnly() {
     moduleName: "AUTOEARN",
   });
 
+  // Try server API, fallback to client-side encoding
+  let encodedData: string;
+  try {
+    console.log("🔧 Trying server API...");
+    const autoEarnModule = await buildAutoEarnModule(
+      {
+        chainId: arbitrumSepolia.id,
+        tokenAddress: NETWORKS.arbitrumSepolia.contracts.usdcToken,
+      },
+      {
+        baseUrl: TEST_CONFIG.apiUrl,
+      },
+    );
+    encodedData = autoEarnModule.data;
+    console.log(`✅ Module built via server API: ${autoEarnModule.address}`);
+  } catch (error) {
+    console.log("⚠️  Server API not available, using client-side encoding...");
+    const autoEarnConfig = createAutoEarnConfig(
+      arbitrumSepolia.id,
+      NETWORKS.arbitrumSepolia.contracts.usdcToken,
+      NETWORKS.arbitrumSepolia.contracts.aavePool,
+    );
+    encodedData = encodeAutoEarnModuleData([autoEarnConfig]);
+    console.log(`✅ Module encoded client-side: ${requiredState.moduleAddress}`);
+  }
+
   console.log("Required state:", {
     chainId: requiredState.chainId,
     moduleName: requiredState.moduleName,
-    moduleAddress: "moduleAddress" in requiredState ? requiredState.moduleAddress : "N/A",
+    moduleAddress: requiredState.moduleAddress,
   });
 
   // Create current state
@@ -380,7 +415,13 @@ async function testOrchestrationCreationOnly() {
   const apiKey = process.env.API_KEY || "test-api-key";
 
   // Test the function
-  const orchestrationData = await createOrchestrationData(currentState, requiredState, ownerAddress, apiKey);
+  const orchestrationData = await createOrchestrationData(
+    currentState,
+    requiredState,
+    ownerAddress,
+    apiKey,
+    encodedData as Hex,
+  );
 
   console.log("✅ Successfully created orchestration data:");
   console.log("Request ID:", orchestrationData.requestId);
