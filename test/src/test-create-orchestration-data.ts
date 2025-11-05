@@ -2,9 +2,8 @@ import dotenv from "dotenv";
 import {
   createOrchestrationData,
   notifyDeposit,
-  getOrchestrationStatus,
   pollOrchestrationStatus,
-  depositFromOrchestrationData,
+  transferToOrchestrationAccount,
   getRequiredState,
   buildAutoEarnModule,
   encodeAutoEarnModuleData,
@@ -169,19 +168,13 @@ export const testCreateOrchestrationData = async () => {
     console.log(`   Module Address: ${requiredState.moduleAddress}`);
     console.log(`   Config Input Type: ${requiredState.configInputType}`);
 
-    // Create orchestration request
-    console.log("\n🎯 Creating Orchestration Request");
-    console.log("---------------------------------");
-
-    // Build AutoEarn module using server-side API (simpler - server handles encoding)
-    // If server API is not available, fall back to client-side encoding
-    console.log("🔧 Building AutoEarn module...");
-    let autoEarnModule;
+    // Build AutoEarn module - try server API first, fallback to client-side
     let encodedData: string;
     
     try {
-      // Try server-side API first
-      autoEarnModule = await buildAutoEarnModule(
+      // Try server-side API first (simpler - server handles encoding)
+      console.log("🔧 Building AutoEarn module using server API...");
+      const autoEarnModule = await buildAutoEarnModule(
         {
           chainId: arbitrumSepolia.id,
           tokenAddress: NETWORKS.arbitrumSepolia.contracts.usdcToken,
@@ -191,29 +184,23 @@ export const testCreateOrchestrationData = async () => {
           baseUrl: TEST_CONFIG.apiUrl,
         },
       );
-      console.log(`✅ AutoEarn module built via server API: ${autoEarnModule.address}`);
-      console.log(`   Encoded data: ${autoEarnModule.data.substring(0, 20)}...`);
       encodedData = autoEarnModule.data;
+      console.log(`✅ AutoEarn module built via server API: ${autoEarnModule.address}`);
     } catch (error) {
-      // Fall back to client-side encoding if server API is not available
+      // Fallback to client-side encoding if server API is not available
       console.log("⚠️  Server API not available, using client-side encoding...");
       console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
-      
-      const { encodeAutoEarnModuleData, createAutoEarnConfig } = await import("unwallet");
       const autoEarnConfig = createAutoEarnConfig(
         arbitrumSepolia.id,
         NETWORKS.arbitrumSepolia.contracts.usdcToken,
         NETWORKS.arbitrumSepolia.contracts.aavePool,
       );
       encodedData = encodeAutoEarnModuleData([autoEarnConfig]);
-      autoEarnModule = {
-        address: requiredState.moduleAddress,
-        chainId: arbitrumSepolia.id,
-        data: encodedData,
-      };
-      console.log(`✅ AutoEarn module encoded client-side: ${autoEarnModule.address}`);
+      console.log(`✅ AutoEarn module encoded client-side: ${requiredState.moduleAddress}`);
     }
 
+    // Create orchestration request
+    console.log("\n🎯 Creating orchestration request...");
     const currentState: CurrentState = {
       chainId: baseSepolia.id,
       tokenAddress: NETWORKS.baseSepolia.contracts.usdcToken,
@@ -229,7 +216,7 @@ export const testCreateOrchestrationData = async () => {
     // Create orchestration data using the built module
     const orchestrationData = await createOrchestrationData(
       currentState,
-      requiredState, // Use requiredState which has all the metadata
+      requiredState, // Use requiredState which has all metadata
       userAccount.address,
       TEST_CONFIG.apiKey,
       encodedData as Hex, // Use encoded data (from server or client)
@@ -245,24 +232,28 @@ export const testCreateOrchestrationData = async () => {
     console.log(`🔧 Source Modules: ${orchestrationData.sourceChainAccountModules.join(", ")}`);
     console.log(`🔧 Destination Modules: ${orchestrationData.destinationChainAccountModules.join(", ")}`);
 
-    // Transfer USDC to smart account
-    console.log("\n💸 Transferring USDC to Smart Account");
-    console.log("-------------------------------------");
-    console.log(`Amount: ${formatUnits(TEST_CONFIG.bridgeAmount, 6)} USDC`);
-    console.log(`To: ${orchestrationData.accountAddressOnSourceChain}`);
+    // Transfer USDC to orchestration account using SDK
+    console.log(`\n💸 Transferring ${formatUnits(TEST_CONFIG.bridgeAmount, 6)} USDC to: ${orchestrationData.accountAddressOnSourceChain}`);
 
-    const transferHash = await baseWalletClient.writeContract({
-      address: NETWORKS.baseSepolia.contracts.usdcToken,
-      abi: ERC20_ABI,
-      functionName: "transfer",
-      args: [orchestrationData.accountAddressOnSourceChain as Address, TEST_CONFIG.bridgeAmount],
+    const depositResult = await transferToOrchestrationAccount(
+      orchestrationData,
+      baseWalletClient,
+      baseClient,
+    );
+
+    if (!depositResult.success || !depositResult.txHash) {
+      throw new Error(`Transfer failed: ${depositResult.error || "Unknown error"}`);
+    }
+
+    console.log(`✅ Transfer submitted: ${depositResult.txHash}`);
+
+    // Get transaction receipt
+    console.log("⏳ Waiting for transaction confirmation...");
+    const receipt = await baseClient.waitForTransactionReceipt({
+      hash: depositResult.txHash as Hex,
     });
 
-    console.log("⏳ Waiting for confirmation...");
-    const receipt = await baseClient.waitForTransactionReceipt({ hash: transferHash });
-    console.log("✅ Transfer confirmed!");
-    console.log(`   Tx Hash: ${receipt.transactionHash}`);
-    console.log(`   Block: ${receipt.blockNumber}`);
+    console.log(`✅ Transfer confirmed! Block: ${receipt.blockNumber}`);
 
     // Verify balance
     const smartAccountBalance = await baseClient.readContract({
@@ -275,9 +266,8 @@ export const testCreateOrchestrationData = async () => {
     console.log(`   Smart Account Balance: ${formatUnits(smartAccountBalance, 6)} USDC`);
 
     // Notify server of deposit
-    console.log("\n🔔 Notifying Server of Deposit");
-    console.log("------------------------------");
-    console.log(`Sending notification with requestId: ${orchestrationData.requestId}`);
+    console.log(`\n🔔 Notifying server of deposit...`);
+    console.log(`   Request ID: ${orchestrationData.requestId}`);
 
     await notifyDeposit({
       requestId: orchestrationData.requestId,
@@ -288,15 +278,13 @@ export const testCreateOrchestrationData = async () => {
     console.log("✅ Server notified successfully!");
 
     // Check orchestration status
-    console.log("\n📊 Checking Orchestration Status");
-    console.log("--------------------------------");
-    console.log("Polling orchestration status...");
+    console.log("\n📊 Polling orchestration status...");
 
     try {
-      const finalStatus = await pollOrchestrationStatus({
+      await pollOrchestrationStatus({
         requestId: orchestrationData.requestId,
         interval: 3000,
-        maxAttempts: 10,
+        maxAttempts: 100,
         onStatusUpdate: (status: OrchestrationStatus) => {
           console.log(`\n[Status Update] Status: ${status.status}`);
           if (status.updated_at || status.created_at) {
@@ -314,11 +302,6 @@ export const testCreateOrchestrationData = async () => {
           console.log(`\n❌ Orchestration error: ${error.message}`);
         },
       });
-
-      console.log("\n✅ Final Status:", finalStatus.status);
-      if (finalStatus.error_message) {
-        console.log("   Error:", finalStatus.error_message);
-      }
     } catch (error) {
       console.log(`\n⚠️  Status polling completed or timed out`);
       if (error instanceof Error) {

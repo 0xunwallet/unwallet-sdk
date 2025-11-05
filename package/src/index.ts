@@ -80,8 +80,6 @@ import {
 } from './utils/orchestration-utils';
 import {
   transferToOrchestrationAccount,
-  executeOrchestration,
-  type ExecuteOrchestrationResult,
 } from './utils/orchestration-workflow';
 import {
   encodeAutoEarnModuleData,
@@ -215,7 +213,6 @@ export {
   getOrchestrationStatus,
   pollOrchestrationStatus,
   transferToOrchestrationAccount,
-  executeOrchestration,
   encodeAutoEarnModuleData,
   createAutoEarnConfig,
   buildAutoEarnModule,
@@ -268,7 +265,6 @@ export type {
   NotifyDepositResponse,
   OrchestrationStatus,
   PollOrchestrationStatusOptions,
-  ExecuteOrchestrationResult,
   AutoEarnConfig,
   AutoEarnParams,
   AutoSwapParams,

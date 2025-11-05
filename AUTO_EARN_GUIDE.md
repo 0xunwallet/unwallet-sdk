@@ -86,10 +86,13 @@ async function enableAutoEarn() {
   });
 
   // 2. Get required state (needed for orchestration metadata)
+  console.log('\n📊 Getting required state for AutoEarn module...');
   const requiredState = await getRequiredState({
     sourceChainId: arbitrumSepolia.id,
     moduleName: 'AUTOEARN',
   });
+  console.log(`✅ Module Address: ${requiredState.moduleAddress}`);
+  console.log(`   Chain ID: ${requiredState.chainId}`);
 
   // 3. Build AutoEarn module - try server API first, fallback to client-side
   let encodedData: string;
@@ -109,6 +112,7 @@ async function enableAutoEarn() {
   } catch (error) {
     // Fallback to client-side encoding if server API is not available
     console.log('⚠️  Server API not available, using client-side encoding...');
+    console.log(`   Error: ${error instanceof Error ? error.message : String(error)}`);
     const autoEarnConfig = createAutoEarnConfig(
       arbitrumSepolia.id,
       NETWORKS.arbitrumSepolia.usdcToken,
@@ -119,7 +123,12 @@ async function enableAutoEarn() {
   }
 
   // 4. Create orchestration request
+  console.log('\n🎯 Creating orchestration request...');
   const bridgeAmount = parseUnits('0.1', 6); // 0.1 USDC
+  console.log(`📝 User Intent:`);
+  console.log(`   Current: ${formatUnits(bridgeAmount, 6)} USDC on Base`);
+  console.log(`   Target: Invest in Aave on Arbitrum`);
+  
   const orchestrationData = await createOrchestrationData(
     {
       chainId: baseSepolia.id,
@@ -133,12 +142,18 @@ async function enableAutoEarn() {
     encodedData, // Use encoded data (from server or client)
   );
 
-  console.log(`✅ Orchestration created: ${orchestrationData.requestId}`);
-  console.log(`📍 Source Account: ${orchestrationData.accountAddressOnSourceChain}`);
-  console.log(`📍 Destination Account: ${orchestrationData.accountAddressOnDestinationChain}`);
+  console.log('\n✅ Orchestration Created Successfully!');
+  console.log('--------------------------------------');
+  console.log(`📌 Request ID: ${orchestrationData.requestId}`);
+  console.log(`📍 Source Chain: ${orchestrationData.sourceChainId}`);
+  console.log(`📍 Destination Chain: ${orchestrationData.destinationChainId}`);
+  console.log(`💼 Source Account: ${orchestrationData.accountAddressOnSourceChain}`);
+  console.log(`💼 Destination Account: ${orchestrationData.accountAddressOnDestinationChain}`);
+  console.log(`🔧 Source Modules: ${orchestrationData.sourceChainAccountModules.join(', ')}`);
   console.log(`🔧 Destination Modules: ${orchestrationData.destinationChainAccountModules.join(', ')}`);
 
   // 5. Transfer USDC to orchestration account
+  console.log(`\n💸 Transferring ${formatUnits(bridgeAmount, 6)} USDC to: ${orchestrationData.accountAddressOnSourceChain}`);
   const depositResult = await transferToOrchestrationAccount(
     orchestrationData,
     baseWalletClient,
@@ -149,12 +164,19 @@ async function enableAutoEarn() {
     throw new Error(`Transfer failed: ${depositResult.error}`);
   }
 
+  console.log(`✅ Transfer submitted: ${depositResult.txHash}`);
+
   // 6. Get transaction receipt
+  console.log('⏳ Waiting for transaction confirmation...');
   const receipt = await baseClient.waitForTransactionReceipt({
     hash: depositResult.txHash as `0x${string}`,
   });
 
+  console.log(`✅ Transfer confirmed! Block: ${receipt.blockNumber}`);
+
   // 7. Notify server of deposit
+  console.log(`\n🔔 Notifying server of deposit...`);
+  console.log(`   Request ID: ${orchestrationData.requestId}`);
   await notifyDeposit({
     requestId: orchestrationData.requestId,
     transactionHash: receipt.transactionHash,
@@ -164,20 +186,37 @@ async function enableAutoEarn() {
   console.log('✅ Server notified successfully!');
 
   // 8. Poll orchestration status
-  await pollOrchestrationStatus({
-    requestId: orchestrationData.requestId,
-    interval: 3000,
-    maxAttempts: 100,
-    onStatusUpdate: (status) => {
-      console.log(`Status: ${status.status}`);
-    },
-    onComplete: (status) => {
-      console.log('🎉 Orchestration completed!');
-    },
-    onError: (error) => {
-      console.error('❌ Error:', error.message);
-    },
-  });
+  console.log(`\n📊 Polling orchestration status...`);
+  try {
+    await pollOrchestrationStatus({
+      requestId: orchestrationData.requestId,
+      interval: 3000,
+      maxAttempts: 100,
+      onStatusUpdate: (status) => {
+        console.log(`\n[Status Update] Status: ${status.status}`);
+        if (status.updated_at || status.created_at) {
+          console.log(`   Updated: ${new Date(status.updated_at || status.created_at || Date.now()).toLocaleString()}`);
+        }
+        if (status.error_message) {
+          console.log(`   Error: ${status.error_message}`);
+        }
+      },
+      onComplete: (status) => {
+        console.log('\n🎉 Orchestration completed successfully!');
+        console.log(`   Final Status: ${status.status}`);
+      },
+      onError: (error) => {
+        console.log(`\n❌ Orchestration error: ${error.message}`);
+      },
+    });
+  } catch (error) {
+    console.log(`\n⚠️  Status polling completed or timed out`);
+    if (error instanceof Error) {
+      console.log(`   ${error.message}`);
+    }
+  }
+
+  console.log('\n✨ Workflow completed!');
 }
 
 // Run it
