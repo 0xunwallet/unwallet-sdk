@@ -25,6 +25,8 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -92,12 +94,16 @@ jobs:
           CURRENT_VERSION=$(node -p "require('./package.json').version")
 
           # Check if this version already exists on npm
+          # If package doesn't exist yet, npm view will return 404, which is fine for first publish
           if npm view unwallet@$CURRENT_VERSION version > /dev/null 2>&1; then
             echo "Version $CURRENT_VERSION already exists on npm"
             echo "should-publish=false" >> $GITHUB_OUTPUT
           else
+            echo "Version $CURRENT_VERSION does not exist on npm (or package doesn't exist yet)"
             echo "should-publish=true" >> $GITHUB_OUTPUT
           fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to npm
         if: steps.publish-check.outputs.should-publish == 'true'
