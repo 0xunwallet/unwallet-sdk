@@ -17,7 +17,7 @@ import {
   parseUnits,
   formatUnits,
 } from 'viem';
-import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia, arbitrumSepolia } from 'viem/chains';
 import type { Address, Hex } from 'viem';
 
@@ -77,14 +77,13 @@ const TEST_CONFIG = {
  *
  * This test demonstrates:
  * 1. Creating orchestration request using SDK
- * 2. Generating random account with ZERO ETH (intermediate account)
- * 3. Transferring USDC to random account and signing EIP-3009 authorization (using SDK)
- * 4. Notifying server with signed authorization (using SDK)
- * 5. Monitoring orchestration status (using SDK)
+ * 2. Signing EIP-3009 authorization with main wallet (OFF-CHAIN - NO GAS!)
+ * 3. Notifying server with signed authorization (using SDK)
+ * 4. Monitoring orchestration status (using SDK)
  *
  * Key features:
- * - Random account OWNS smart accounts but has ZERO ETH
- * - All operations use SDK functions
+ * - Main wallet signs authorization directly (OFF-CHAIN - NO GAS!)
+ * - No intermediate account needed
  * - Server executes transferWithAuthorization in Multicall3 batch
  * - TEE server sponsors all gas costs
  */
@@ -107,17 +106,6 @@ async function testGaslessDepositEIP3009() {
     const userAccount = privateKeyToAccount(userPrivateKey);
     console.log('✅ User account:', userAccount.address);
 
-    // Generate random account (will have ZERO ETH - completely gasless!)
-    const randomPrivateKey = generatePrivateKey();
-    const randomAccount = privateKeyToAccount(randomPrivateKey);
-    console.log('✅ Random intermediate account:', randomAccount.address);
-    console.log('   Private Key:', randomPrivateKey);
-    console.log('   (This account has ZERO ETH - completely gasless!)');
-    console.log('   ⚠️  IMPORTANT: This account owns both smart accounts!');
-    console.log(
-      '   Save the private key if you want to use the smart accounts later.'
-    );
-
     // Create clients
     const basePublicClient = createPublicClient({
       chain: baseSepolia,
@@ -126,12 +114,6 @@ async function testGaslessDepositEIP3009() {
 
     const userWalletClient = createWalletClient({
       account: userAccount,
-      chain: baseSepolia,
-      transport: http(NETWORKS.baseSepolia.rpcUrl),
-    });
-
-    const randomWalletClient = createWalletClient({
-      account: randomAccount,
       chain: baseSepolia,
       transport: http(NETWORKS.baseSepolia.rpcUrl),
     });
@@ -174,7 +156,7 @@ async function testGaslessDepositEIP3009() {
       chainId: baseSepolia.id,
       tokenAddress: NETWORKS.baseSepolia.contracts.usdcToken,
       tokenAmount: TEST_CONFIG.bridgeAmount.toString(),
-      ownerAddress: randomAccount.address, // Random account owns the smart accounts
+      ownerAddress: userAccount.address, // User account owns the smart accounts
     };
 
     console.log('📝 User Intent:');
@@ -182,14 +164,14 @@ async function testGaslessDepositEIP3009() {
       `   Current: ${formatUnits(TEST_CONFIG.bridgeAmount, 6)} USDC on Base`
     );
     console.log(`   Target: Invest in Aave on Arbitrum`);
-    console.log(`   Owner: ${randomAccount.address}`);
+    console.log(`   Owner: ${userAccount.address}`);
 
     // Create orchestration data using SDK
     console.log('\n📤 Creating orchestration request...');
     const orchestrationData = await createOrchestrationData(
       currentState,
       requiredState,
-      randomAccount.address,
+      userAccount.address,
       TEST_CONFIG.apiKey,
       encodedData as Hex
     );
@@ -213,21 +195,18 @@ async function testGaslessDepositEIP3009() {
     );
     console.log(`Smart Account: ${orchestrationData.accountAddressOnSourceChain}`);
 
-    console.log('\nStep 1: Transferring USDC to intermediate account...');
-    console.log(`   From: ${userAccount.address}`);
-    console.log(`   To: ${randomAccount.address} (intermediate)`);
+    console.log('\nSigning EIP-3009 authorization (GASLESS!)...');
+    console.log(`   From: ${userAccount.address} (main wallet with USDC)`);
+    console.log(`   To: ${orchestrationData.accountAddressOnSourceChain} (smart account)`);
+    console.log(`   ⚠️  Signing is OFF-CHAIN - NO GAS NEEDED!`);
 
-    console.log('\nStep 2: Signing EIP-3009 authorization (GASLESS!)...');
-    console.log(`   Intermediate account signs with ZERO ETH`);
-
-    // Use SDK depositGasless function
+    // Use SDK depositGasless function - main wallet signs directly
     const gaslessResult: GaslessDepositResult = await depositGasless(
-      randomAccount.address, // intermediate address
-      orchestrationData.accountAddressOnSourceChain, // smart account address
+      userAccount.address, // from - main wallet that owns USDC
+      orchestrationData.accountAddressOnSourceChain, // to - smart account address
       NETWORKS.baseSepolia.contracts.usdcToken, // token address
       TEST_CONFIG.bridgeAmount, // amount
-      userWalletClient, // user wallet (pays for transfer to intermediate)
-      randomWalletClient, // intermediate wallet (signs authorization, NO ETH NEEDED!)
+      userWalletClient, // wallet client (signs authorization, NO ETH needed for signing!)
       basePublicClient // public client
     );
 
@@ -235,8 +214,7 @@ async function testGaslessDepositEIP3009() {
       throw new Error(`Gasless deposit failed: ${gaslessResult.error}`);
     }
 
-    console.log('\n✅ Gasless deposit prepared successfully!');
-    console.log(`   Transfer Hash: ${gaslessResult.txHash}`);
+    console.log('\n✅ EIP-3009 authorization signed successfully (gasless)!');
     console.log(
       `   Authorization From: ${gaslessResult.signedAuthorization.from}`
     );
@@ -246,32 +224,30 @@ async function testGaslessDepositEIP3009() {
     );
     console.log(`   Authorization Nonce: ${gaslessResult.signedAuthorization.nonce}`);
 
-    // Verify random account has USDC
-    const randomBalance = (await basePublicClient.readContract({
+    // Verify user still has USDC (no transfer happened yet - server will do it)
+    const userBalanceAfter = (await basePublicClient.readContract({
       address: NETWORKS.baseSepolia.contracts.usdcToken,
       abi: ERC20_ABI,
       functionName: 'balanceOf',
-      args: [randomAccount.address],
+      args: [userAccount.address],
     })) as bigint;
     console.log(
-      `\n💰 Intermediate account USDC balance: ${formatUnits(randomBalance, 6)} USDC`
+      `\n💰 User USDC balance: ${formatUnits(userBalanceAfter, 6)} USDC (unchanged - server will transfer)`
     );
-
-    // Get transaction receipt for block number
-    const receipt = await basePublicClient.waitForTransactionReceipt({
-      hash: gaslessResult.txHash as Hex,
-    });
 
     // ===== 4. NOTIFY SERVER WITH SIGNED AUTHORIZATION =====
     console.log('\n===== 4. NOTIFY SERVER WITH SIGNED AUTHORIZATION (using SDK) =====');
     console.log(`   Transfer Type: TRANSFER_WITH_AUTHORIZATION (${TransferType.TRANSFER_WITH_AUTHORIZATION})`);
     console.log(`   Request ID: ${orchestrationData.requestId}`);
+    console.log(`   ⚠️  Note: No transaction hash needed - signing was off-chain!`);
 
     // Use SDK notifyDepositGasless function
+    // Note: transactionHash and blockNumber are not needed for gasless transfers
+    // We pass empty values as placeholders since the server will execute the transfer
     await notifyDepositGasless(
       orchestrationData.requestId,
-      gaslessResult.txHash as Hex,
-      receipt.blockNumber,
+      '0x' as Hex, // No transaction hash - signing was off-chain
+      '0', // No block number - signing was off-chain
       gaslessResult.signedAuthorization
     );
 
@@ -283,7 +259,7 @@ async function testGaslessDepositEIP3009() {
     console.log('⏳ Server will now:');
     console.log('   1. Execute Multicall3 batch:');
     console.log(
-      '      - transferWithAuthorization (move from random to smart account)'
+      '      - transferWithAuthorization (move from user wallet to smart account)'
     );
     console.log('      - Deploy smart account on source chain');
     console.log('      - Execute bridge operation');
@@ -292,7 +268,7 @@ async function testGaslessDepositEIP3009() {
     console.log('   4. Execute AutoEarn module');
     console.log('\n⏳ Polling orchestration status...');
     console.log('   (This may take 2-3 minutes for bridge transfer)');
-    console.log('   Note: Random account has ZERO ETH - completely gasless!');
+    console.log('   ✅ Completely gasless - user only signed off-chain!');
 
     try {
       await pollOrchestrationStatus({
@@ -334,18 +310,17 @@ async function testGaslessDepositEIP3009() {
     console.log('   2. createAutoEarnConfig() - Create AutoEarn config');
     console.log('   3. encodeAutoEarnModuleData() - Encode module data');
     console.log('   4. createOrchestrationData() - Create orchestration request');
-    console.log('   5. depositGasless() - Transfer + sign EIP-3009 authorization');
+    console.log('   5. depositGasless() - Sign EIP-3009 authorization (off-chain)');
     console.log('   6. notifyDepositGasless() - Notify server with signed data');
     console.log('   7. pollOrchestrationStatus() - Monitor orchestration');
     console.log('\n✅ Key Features Demonstrated:');
-    console.log('   • Random account has ZERO ETH (completely gasless)');
-    console.log('   • Random account owns both smart accounts');
+    console.log('   • User wallet signs EIP-3009 authorization (OFF-CHAIN - NO GAS!)');
+    console.log('   • User account owns both smart accounts');
     console.log('   • EIP-3009 transferWithAuthorization (no gas for signing)');
     console.log('   • Server executes in Multicall3 batch (server pays gas)');
     console.log('   • All operations use SDK functions');
     console.log('\n📌 Important Info:');
-    console.log(`   Random Account: ${randomAccount.address}`);
-    console.log(`   Private Key: ${randomPrivateKey}`);
+    console.log(`   User Account: ${userAccount.address}`);
     console.log(
       `   Source Smart Account: ${orchestrationData.accountAddressOnSourceChain}`
     );

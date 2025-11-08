@@ -15,11 +15,7 @@ The UnWallet SDK enables **truly gasless token transfers** using EIP-3009 `trans
 ## How It Works
 
 ```
-User Account (has ETH + USDC)
-    ↓
-    Transfer USDC to intermediate account
-    ↓
-Intermediate Account (has USDC, ZERO ETH!)
+User Account (has USDC)
     ↓
     Sign EIP-3009 authorization (OFF-CHAIN - NO GAS!)
     ↓
@@ -28,7 +24,7 @@ Intermediate Account (has USDC, ZERO ETH!)
 Server
     ↓
     Execute Multicall3 batch (server pays gas):
-    • transferWithAuthorization (move USDC to smart account)
+    • transferWithAuthorization (move USDC from user to smart account)
     • Deploy smart account
     • Execute modules
 ```
@@ -79,12 +75,8 @@ import { baseSepolia, arbitrumSepolia } from 'viem/chains';
 import type { Address, Hex } from 'viem';
 
 // 1. Setup accounts and clients
-const userPrivateKey = '0x...'; // Your account with ETH and USDC
+const userPrivateKey = '0x...'; // Your account with USDC
 const userAccount = privateKeyToAccount(userPrivateKey as Hex);
-
-// Generate intermediate account (can have ZERO ETH!)
-const intermediatePrivateKey = generatePrivateKey();
-const intermediateAccount = privateKeyToAccount(intermediatePrivateKey);
 
 const publicClient = createPublicClient({
   chain: baseSepolia,
@@ -97,18 +89,12 @@ const userWalletClient = createWalletClient({
   transport: http('https://sepolia.base.org'),
 });
 
-const intermediateWalletClient = createWalletClient({
-  account: intermediateAccount,
-  chain: baseSepolia,
-  transport: http('https://sepolia.base.org'),
-});
-
 // 2. Create orchestration request
 const currentState: CurrentState = {
   chainId: baseSepolia.id,
   tokenAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC
   tokenAmount: parseUnits('0.1', 6).toString(), // 0.1 USDC
-  ownerAddress: intermediateAccount.address, // Intermediate account owns smart accounts
+  ownerAddress: userAccount.address, // User account owns smart accounts
 };
 
 const requiredState = await getRequiredState({
@@ -126,19 +112,18 @@ const encodedData = encodeAutoEarnModuleData([autoEarnConfig]);
 const orchestrationData = await createOrchestrationData(
   currentState,
   requiredState,
-  intermediateAccount.address,
+  userAccount.address,
   'your-api-key',
   encodedData as Hex
 );
 
-// 3. Execute gasless deposit (all-in-one!)
+// 3. Sign EIP-3009 authorization (OFF-CHAIN - NO GAS!)
 const gaslessResult: GaslessDepositResult = await depositGasless(
-  intermediateAccount.address, // Intermediate account (can have 0 ETH!)
-  orchestrationData.accountAddressOnSourceChain, // Smart account
+  userAccount.address, // From - user's wallet that owns USDC
+  orchestrationData.accountAddressOnSourceChain, // To - smart account
   '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC address
   parseUnits('0.1', 6), // Amount
-  userWalletClient, // User wallet (pays for initial transfer)
-  intermediateWalletClient, // Intermediate wallet (signs, NO ETH needed!)
+  userWalletClient, // Wallet client (signs authorization, NO ETH needed for signing!)
   publicClient
 );
 
@@ -146,16 +131,12 @@ if (!gaslessResult.success || !gaslessResult.signedAuthorization) {
   throw new Error(`Gasless deposit failed: ${gaslessResult.error}`);
 }
 
-// 4. Get transaction receipt
-const receipt = await publicClient.waitForTransactionReceipt({
-  hash: gaslessResult.txHash as Hex,
-});
-
-// 5. Notify server with signed authorization
+// 4. Notify server with signed authorization
+// Note: No transaction hash needed - signing was off-chain!
 await notifyDepositGasless(
   orchestrationData.requestId,
-  gaslessResult.txHash as Hex,
-  receipt.blockNumber,
+  '0x' as Hex, // Placeholder - no transaction hash for off-chain signing
+  '0', // Placeholder - no block number for off-chain signing
   gaslessResult.signedAuthorization
 );
 
@@ -178,26 +159,19 @@ await pollOrchestrationStatus({
 
 ## Step-by-Step Guide
 
-### Step 1: Setup Accounts
+### Step 1: Setup Account
 
-You need two accounts:
+You only need one account:
 
-1. **User Account** - Has ETH (for initial transfer) and USDC
-2. **Intermediate Account** - Can have ZERO ETH! Only needs to sign the authorization
+1. **User Account** - Has USDC (NO ETH needed for signing!)
 
 ```typescript
-import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+import { privateKeyToAccount } from 'viem/accounts';
 
-// User account (has ETH + USDC)
+// User account (has USDC, NO ETH needed for signing!)
 const userAccount = privateKeyToAccount('0xYourPrivateKey' as Hex);
 
-// Intermediate account (can have 0 ETH!)
-const intermediatePrivateKey = generatePrivateKey();
-const intermediateAccount = privateKeyToAccount(intermediatePrivateKey);
-
-console.log('Intermediate account:', intermediateAccount.address);
-console.log('Private key:', intermediatePrivateKey);
-// ⚠️ Save the private key if you want to use the smart accounts later!
+console.log('User account:', userAccount.address);
 ```
 
 ### Step 2: Create Orchestration Request
@@ -217,7 +191,7 @@ const currentState: CurrentState = {
   chainId: 84532, // Base Sepolia
   tokenAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC
   tokenAmount: parseUnits('0.1', 6).toString(), // 0.1 USDC (6 decimals)
-  ownerAddress: intermediateAccount.address, // Intermediate account owns smart accounts
+  ownerAddress: userAccount.address, // User account owns smart accounts
 };
 
 const requiredState = await getRequiredState({
@@ -236,7 +210,7 @@ const encodedData = encodeAutoEarnModuleData([autoEarnConfig]);
 const orchestrationData = await createOrchestrationData(
   currentState,
   requiredState,
-  intermediateAccount.address,
+  userAccount.address,
   'your-api-key',
   encodedData as Hex
 );
@@ -246,23 +220,20 @@ console.log('Source Account:', orchestrationData.accountAddressOnSourceChain);
 console.log('Destination Account:', orchestrationData.accountAddressOnDestinationChain);
 ```
 
-### Step 3: Execute Gasless Deposit
+### Step 3: Sign EIP-3009 Authorization
 
-The `depositGasless` function handles everything:
-1. Transfers USDC from user → intermediate account
-2. Signs EIP-3009 authorization (off-chain, gasless!)
+The `depositGasless` function signs the EIP-3009 authorization off-chain (NO GAS!):
 
 ```typescript
 import { depositGasless } from 'unwallet';
 import type { GaslessDepositResult } from 'unwallet';
 
 const gaslessResult: GaslessDepositResult = await depositGasless(
-  intermediateAccount.address, // Intermediate account (can have 0 ETH!)
-  orchestrationData.accountAddressOnSourceChain, // Smart account address
+  userAccount.address, // From - user's wallet that owns USDC
+  orchestrationData.accountAddressOnSourceChain, // To - smart account address
   '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC token address
   parseUnits('0.1', 6), // Amount (0.1 USDC)
-  userWalletClient, // User wallet (pays for initial transfer)
-  intermediateWalletClient, // Intermediate wallet (signs, NO ETH needed!)
+  userWalletClient, // Wallet client (signs authorization, NO ETH needed!)
   publicClient
 );
 
@@ -270,8 +241,8 @@ if (!gaslessResult.success || !gaslessResult.signedAuthorization) {
   throw new Error(`Gasless deposit failed: ${gaslessResult.error}`);
 }
 
-console.log('Transfer hash:', gaslessResult.txHash);
-console.log('Authorization signed:', gaslessResult.signedAuthorization);
+console.log('✅ Authorization signed (off-chain, no gas!)');
+console.log('Authorization:', gaslessResult.signedAuthorization);
 ```
 
 ### Step 4: Notify Server
@@ -281,15 +252,11 @@ Send the signed authorization to the server:
 ```typescript
 import { notifyDepositGasless } from 'unwallet';
 
-// Get transaction receipt for block number
-const receipt = await publicClient.waitForTransactionReceipt({
-  hash: gaslessResult.txHash as Hex,
-});
-
+// Note: No transaction hash needed - signing was off-chain!
 await notifyDepositGasless(
   orchestrationData.requestId,
-  gaslessResult.txHash as Hex,
-  receipt.blockNumber,
+  '0x' as Hex, // Placeholder - no transaction hash for off-chain signing
+  '0', // Placeholder - no block number for off-chain signing
   gaslessResult.signedAuthorization
 );
 
@@ -331,13 +298,13 @@ await pollOrchestrationStatus({
 Execute a gasless deposit with EIP-3009 authorization.
 
 **Parameters:**
-- `intermediateAddress: Address` - Address that will sign the authorization (can have 0 ETH!)
+- `fromAddress: Address` - User's wallet address that owns the tokens
 - `smartAccountAddress: Address` - Smart account address (from orchestration)
-- `tokenAddress: Address` - Token address (e.g., USDC)
+- `tokenAddress: Address` - Token address (e.g., USDC, must support EIP-3009)
 - `tokenAmount: bigint` - Amount to transfer (in smallest unit, e.g., 6 decimals for USDC)
-- `userWalletClient: WalletClient` - User's wallet client (pays for initial transfer)
-- `intermediateWalletClient: WalletClient` - Intermediate wallet client (signs authorization)
+- `walletClient: WalletClient` - Wallet client (signs authorization, NO ETH needed for signing!)
 - `publicClient: PublicClient` - Public client for blockchain reads
+- `validityWindow?: number` - Validity window in seconds (default: 3600 = 1 hour)
 
 **Returns:**
 ```typescript
@@ -346,8 +313,6 @@ Promise<GaslessDepositResult>
 interface GaslessDepositResult {
   success: boolean;
   signedAuthorization?: SignedTransferAuthorization;
-  intermediateAddress?: Address;
-  txHash?: string; // Hash of transfer to intermediate address
   error?: string;
 }
 ```
@@ -358,14 +323,16 @@ Notify the server with a signed EIP-3009 authorization.
 
 **Parameters:**
 - `requestId: Hex` - Orchestration request ID
-- `transactionHash: Hex` - Hash of transfer to intermediate address
-- `blockNumber: string | bigint` - Block number of transfer transaction
+- `transactionHash: Hex` - Placeholder (use `'0x'` for off-chain signing)
+- `blockNumber: string | bigint` - Placeholder (use `'0'` for off-chain signing)
 - `signedAuthorization: SignedTransferAuthorization` - Signed authorization from `depositGasless()`
 
 **Returns:**
 ```typescript
 Promise<NotifyDepositResponse>
 ```
+
+**Note:** For gasless transfers, `transactionHash` and `blockNumber` are placeholders since signing happens off-chain. The server will execute the `transferWithAuthorization` on-chain.
 
 ### `pollOrchestrationStatus()`
 
@@ -415,8 +382,6 @@ async function executeGaslessTransfer(
 ) {
   // Setup
   const userAccount = privateKeyToAccount(userPrivateKey);
-  const intermediatePrivateKey = generatePrivateKey();
-  const intermediateAccount = privateKeyToAccount(intermediatePrivateKey);
 
   const publicClient = createPublicClient({
     chain: baseSepolia,
@@ -429,18 +394,12 @@ async function executeGaslessTransfer(
     transport: http('https://sepolia.base.org'),
   });
 
-  const intermediateWalletClient = createWalletClient({
-    account: intermediateAccount,
-    chain: baseSepolia,
-    transport: http('https://sepolia.base.org'),
-  });
-
   // 1. Create orchestration
   const currentState: CurrentState = {
     chainId: baseSepolia.id,
     tokenAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     tokenAmount: parseUnits(amount, 6).toString(),
-    ownerAddress: intermediateAccount.address,
+    ownerAddress: userAccount.address,
   };
 
   const requiredState = await getRequiredState({
@@ -458,19 +417,18 @@ async function executeGaslessTransfer(
   const orchestrationData = await createOrchestrationData(
     currentState,
     requiredState,
-    intermediateAccount.address,
+    userAccount.address,
     apiKey,
     encodedData as Hex
   );
 
-  // 2. Execute gasless deposit
+  // 2. Sign EIP-3009 authorization (off-chain, no gas!)
   const gaslessResult: GaslessDepositResult = await depositGasless(
-    intermediateAccount.address,
+    userAccount.address,
     orchestrationData.accountAddressOnSourceChain,
     '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     parseUnits(amount, 6),
     userWalletClient,
-    intermediateWalletClient,
     publicClient
   );
 
@@ -479,14 +437,10 @@ async function executeGaslessTransfer(
   }
 
   // 3. Notify server
-  const receipt = await publicClient.waitForTransactionReceipt({
-    hash: gaslessResult.txHash as Hex,
-  });
-
   await notifyDepositGasless(
     orchestrationData.requestId,
-    gaslessResult.txHash as Hex,
-    receipt.blockNumber,
+    '0x' as Hex, // Placeholder - no transaction hash for off-chain signing
+    '0', // Placeholder - no block number for off-chain signing
     gaslessResult.signedAuthorization
   );
 
@@ -502,8 +456,6 @@ async function executeGaslessTransfer(
 
   return {
     requestId: orchestrationData.requestId,
-    intermediateAccount: intermediateAccount.address,
-    intermediatePrivateKey, // Save this if user wants to use smart accounts later
     sourceAccount: orchestrationData.accountAddressOnSourceChain,
     destinationAccount: orchestrationData.accountAddressOnDestinationChain,
   };
@@ -523,25 +475,18 @@ const result = await executeGaslessTransfer(
 
 ```
 ┌─────────────┐
-│ User Wallet │ (has ETH + USDC)
+│ User Wallet │ (has USDC)
 └──────┬──────┘
        │
-       │ 1. Transfer USDC
-       ▼
-┌─────────────┐
-│Intermediate │ (has USDC, ZERO ETH!)
-│   Account   │
-└──────┬──────┘
-       │
-       │ 2. Sign EIP-3009 authorization
+       │ 1. Sign EIP-3009 authorization
        │    (OFF-CHAIN - NO GAS!)
        ▼
 ┌─────────────┐
 │   Server    │
 └──────┬──────┘
        │
-       │ 3. Execute Multicall3 batch:
-       │    - transferWithAuthorization
+       │ 2. Execute Multicall3 batch:
+       │    - transferWithAuthorization (move USDC from user to smart account)
        │    - Deploy smart account
        │    - Execute modules
        │    (Server pays all gas!)
@@ -643,10 +588,10 @@ TEST_PRIVATE_KEY=0xYourPrivateKeyWithUSDC
 
 The gasless transfer feature enables truly gasless token transfers by:
 
-1. ✅ **Allowing off-chain signing** - Users sign authorizations without paying gas
-2. ✅ **Server-side execution** - Server executes authorizations in Multicall3 batches
-3. ✅ **Atomic operations** - All steps happen in a single transaction
-4. ✅ **Zero ETH requirement** - Intermediate account needs ZERO ETH
+1. ✅ **Off-chain signing** - Users sign EIP-3009 authorizations without paying gas (NO ETH needed!)
+2. ✅ **Server-side execution** - Server executes `transferWithAuthorization` in Multicall3 batches
+3. ✅ **Atomic operations** - Transfer, deployment, and module execution in a single transaction
+4. ✅ **Zero ETH requirement** - User wallet needs ZERO ETH for signing (only needs USDC)
 
-This provides a seamless, gasless experience for users while maintaining security through on-chain signature verification.
+This provides a seamless, gasless experience for users while maintaining security through on-chain signature verification. The user simply signs an authorization off-chain, and the server handles all on-chain execution.
 

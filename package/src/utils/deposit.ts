@@ -14,8 +14,6 @@ export interface DepositResult {
 export interface GaslessDepositResult {
   success: boolean;
   signedAuthorization?: SignedTransferAuthorization;
-  intermediateAddress?: Address;
-  txHash?: string; // Hash of transfer to intermediate address
   error?: string;
 }
 
@@ -138,90 +136,51 @@ export const depositFromOrchestrationData = async (
 
 /**
  * Gasless deposit using EIP-3009 transferWithAuthorization
- * This allows a user to transfer tokens to an intermediate address and sign an authorization
- * for the server to move tokens from the intermediate address to the smart account (gasless).
+ * Signs an authorization for the server to move tokens from the user's wallet to the smart account (gasless).
  *
  * Flow:
- * 1. User transfers tokens to an intermediate address (could be a random/TEE wallet)
- * 2. Intermediate account signs EIP-3009 authorization (NO ETH NEEDED)
- * 3. User sends signed authorization to server
- * 4. Server executes transferWithAuthorization in Multicall3 batch (server pays gas)
+ * 1. User signs EIP-3009 authorization with their wallet (OFF-CHAIN - NO GAS!)
+ * 2. User sends signed authorization to server
+ * 3. Server executes transferWithAuthorization in Multicall3 batch (server pays gas)
  *
- * @param intermediateAddress - Address that will receive tokens and sign authorization (can have 0 ETH)
+ * @param fromAddress - User's wallet address that owns the tokens
  * @param smartAccountAddress - Smart account address to receive tokens
- * @param tokenAddress - Token contract address
+ * @param tokenAddress - Token contract address (must support EIP-3009)
  * @param tokenAmount - Amount of tokens to transfer
- * @param userWalletClient - User's wallet client (must have tokens and ETH for initial transfer)
- * @param intermediateWalletClient - Intermediate wallet client (can have 0 ETH, only for signing)
- * @param publicClient - Public client for reading token info and waiting for receipts
+ * @param walletClient - User's wallet client (signs authorization, NO ETH needed for signing!)
+ * @param publicClient - Public client for reading token info
+ * @param validityWindow - Validity window in seconds (default: 1 hour)
  */
 export const depositGasless = async (
-  intermediateAddress: Address,
+  fromAddress: Address,
   smartAccountAddress: Address,
   tokenAddress: Address,
   tokenAmount: bigint,
-  userWalletClient: WalletClient,
-  intermediateWalletClient: WalletClient,
+  walletClient: WalletClient,
   publicClient: PublicClient,
+  validityWindow: number = 3600,
 ): Promise<GaslessDepositResult> => {
   try {
     console.log('Initiating gasless deposit with EIP-3009...');
-    console.log('Intermediate Address:', intermediateAddress);
+    console.log('From Address:', fromAddress);
     console.log('Smart Account Address:', smartAccountAddress);
     console.log('Token Address:', tokenAddress);
     console.log('Token Amount:', tokenAmount.toString());
 
-    // Step 1: Transfer tokens from user to intermediate address
-    console.log('Step 1: Transferring tokens to intermediate address...');
-
-    const erc20TransferAbi = [
-      {
-        inputs: [
-          { name: 'to', type: 'address' },
-          { name: 'amount', type: 'uint256' },
-        ],
-        name: 'transfer',
-        outputs: [{ name: '', type: 'bool' }],
-        stateMutability: 'nonpayable',
-        type: 'function',
-      },
-    ] as const;
-
-    const txHash = await userWalletClient.writeContract({
-      address: tokenAddress,
-      abi: erc20TransferAbi,
-      functionName: 'transfer',
-      args: [intermediateAddress, tokenAmount],
-      account: userWalletClient.account!,
-      chain: userWalletClient.chain,
-    });
-
-    console.log('Transfer transaction hash:', txHash);
-
-    // Wait for transaction confirmation
-    const receipt = await publicClient.waitForTransactionReceipt({
-      hash: txHash as `0x${string}`,
-    });
-
-    console.log('Transfer confirmed:', {
-      blockNumber: receipt.blockNumber,
-      gasUsed: receipt.gasUsed.toString(),
-    });
-
-    // Step 2: Sign EIP-3009 authorization with intermediate account (GASLESS!)
-    console.log('Step 2: Signing EIP-3009 authorization (gasless)...');
+    // Sign EIP-3009 authorization (OFF-CHAIN - NO GAS!)
+    console.log('Signing EIP-3009 authorization (gasless)...');
 
     const { signTransferWithAuthorization } = await import('./eip3009');
 
     const signedAuthorization = await signTransferWithAuthorization(
-      intermediateAddress, // from
-      smartAccountAddress, // to
+      fromAddress, // from - user's wallet
+      smartAccountAddress, // to - smart account
       tokenAmount, // value
       tokenAddress, // token
-      userWalletClient.chain!.id, // chainId
-      intermediateWalletClient, // signer (can have 0 ETH!)
+      walletClient.chain!.id, // chainId
+      walletClient, // signer (NO ETH needed for signing!)
       publicClient, // for reading token info
-      3600, // 1 hour validity
+      validityWindow,
     );
 
     console.log('✅ EIP-3009 authorization signed (gasless)!');
@@ -233,8 +192,6 @@ export const depositGasless = async (
     const result: GaslessDepositResult = {
       success: true,
       signedAuthorization,
-      intermediateAddress,
-      txHash,
     };
 
     console.log('✅ Gasless deposit prepared successfully');
@@ -256,18 +213,18 @@ export const depositGasless = async (
  */
 export const depositGaslessFromOrchestrationData = async (
   od: OrchestrationData,
-  intermediateAddress: Address,
-  userWalletClient: WalletClient,
-  intermediateWalletClient: WalletClient,
+  fromAddress: Address,
+  walletClient: WalletClient,
   publicClient: PublicClient,
+  validityWindow: number = 3600,
 ): Promise<GaslessDepositResult> => {
   return depositGasless(
-    intermediateAddress,
+    fromAddress,
     od.accountAddressOnSourceChain,
     od.sourceTokenAddress,
     od.sourceTokenAmount,
-    userWalletClient,
-    intermediateWalletClient,
+    walletClient,
     publicClient,
+    validityWindow,
   );
 };
