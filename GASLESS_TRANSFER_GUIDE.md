@@ -70,7 +70,7 @@ import {
   parseUnits,
   formatUnits,
 } from 'viem';
-import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia, arbitrumSepolia } from 'viem/chains';
 import type { Address, Hex } from 'viem';
 
@@ -140,7 +140,7 @@ await notifyDepositGasless(
   gaslessResult.signedAuthorization
 );
 
-// 6. Monitor orchestration status
+// 5. Monitor orchestration status
 await pollOrchestrationStatus({
   requestId: orchestrationData.requestId,
   interval: 3000,
@@ -371,7 +371,7 @@ import {
   http,
   parseUnits,
 } from 'viem';
-import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia, arbitrumSepolia } from 'viem/chains';
 import type { Address, Hex } from 'viem';
 
@@ -501,7 +501,7 @@ const result = await executeGaslessTransfer(
 1. **Nonce Uniqueness**: Each authorization uses a unique nonce (automatically generated)
 2. **Validity Window**: Authorizations expire after 1 hour (configurable)
 3. **Signature Verification**: Server verifies signatures on-chain before executing
-4. **Token Ownership**: Ensure intermediate account owns tokens before signing
+4. **Token Ownership**: Ensure user account owns tokens before signing
 5. **Amount Verification**: Verify amount matches orchestration amount
 
 ## Supported Tokens
@@ -538,9 +538,10 @@ try {
 - Check token decimals (USDC uses 6 decimals)
 
 ### "Gasless deposit failed"
-- Verify intermediate account has received USDC
+- Verify user account has sufficient USDC balance
 - Check that token supports EIP-3009
 - Ensure network RPC is accessible
+- Verify the wallet client is properly configured
 
 ### "Server not responding"
 - Check API server URL is correct
@@ -554,21 +555,22 @@ try {
 
 ## Best Practices
 
-1. **Save Intermediate Account**: If users want to use smart accounts later, save the intermediate account private key
-2. **Error Handling**: Always check `gaslessResult.success` before proceeding
-3. **Status Polling**: Use appropriate polling intervals (3-5 seconds) to avoid rate limiting
-4. **User Feedback**: Show status updates to users during orchestration
-5. **Retry Logic**: Implement retry logic for network failures
+1. **Error Handling**: Always check `gaslessResult.success` before proceeding
+2. **Status Polling**: Use appropriate polling intervals (3-5 seconds) to avoid rate limiting
+3. **User Feedback**: Show status updates to users during orchestration
+4. **Retry Logic**: Implement retry logic for network failures
+5. **Validity Window**: Consider adjusting the validity window based on your use case (default is 1 hour)
 
 ## Differences from Normal Transfer
 
 | Feature | Normal Transfer | Gasless Transfer |
 |---------|----------------|------------------|
 | Gas Required | User pays gas | Server pays gas |
-| Account Needs ETH | Yes | No (intermediate account needs ZERO ETH) |
+| Account Needs ETH | Yes | No (user account needs ZERO ETH for signing!) |
 | Approvals | May require approval | No approval needed |
 | Execution | Separate transaction | Included in Multicall3 batch |
 | Atomicity | Separate steps | All in one transaction |
+| Signing | On-chain (requires gas) | Off-chain (no gas needed!) |
 
 ## Testing
 

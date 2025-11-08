@@ -11,6 +11,7 @@ A TypeScript SDK for seamless crypto payments with stealth addresses and gasless
 
 ## Installation
 
+
 ```bash
 npm install unwallet
 ```
