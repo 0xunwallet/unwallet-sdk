@@ -1,10 +1,29 @@
 import { type Hex, type Address } from 'viem';
 import { SERVER_URL_ENS } from './constants';
 
+export enum TransferType {
+  NORMAL = 0,
+  TRANSFER_WITH_AUTHORIZATION = 1,
+}
+
+export interface SignedTransferAuthorizationData {
+  from: Address;
+  to: Address;
+  value: string; // BigInt as string for JSON
+  validAfter: string; // BigInt as string for JSON
+  validBefore: string; // BigInt as string for JSON
+  nonce: Hex;
+  v: number;
+  r: Hex;
+  s: Hex;
+}
+
 export interface NotifyDepositParams {
   requestId: Hex;
   transactionHash: Hex;
   blockNumber: string | bigint;
+  transferType?: TransferType;
+  signedData?: SignedTransferAuthorizationData;
 }
 
 export interface NotifyDepositResponse {
@@ -36,13 +55,22 @@ export const notifyDeposit = async (
   params: NotifyDepositParams,
 ): Promise<NotifyDepositResponse> => {
   try {
-    const payload = {
+    const payload: any = {
       requestId: params.requestId,
       transactionHash: params.transactionHash,
-      blockNumber: typeof params.blockNumber === 'bigint' 
-        ? params.blockNumber.toString() 
+      blockNumber: typeof params.blockNumber === 'bigint'
+        ? params.blockNumber.toString()
         : params.blockNumber,
     };
+
+    // Add optional fields if present
+    if (params.transferType !== undefined) {
+      payload.transferType = params.transferType;
+    }
+
+    if (params.signedData) {
+      payload.signedData = params.signedData;
+    }
 
     console.log('Notifying server of deposit:', payload);
 
@@ -165,5 +193,43 @@ export const pollOrchestrationStatus = async (
   }
 
   throw new Error(`Orchestration status polling timed out after ${maxAttempts} attempts`);
+};
+
+/**
+ * Helper function to notify deposit with EIP-3009 signed authorization
+ */
+export const notifyDepositGasless = async (
+  requestId: Hex,
+  transactionHash: Hex,
+  blockNumber: string | bigint,
+  signedAuthorization: {
+    from: Address;
+    to: Address;
+    value: bigint;
+    validAfter: bigint;
+    validBefore: bigint;
+    nonce: Hex;
+    v: number;
+    r: Hex;
+    s: Hex;
+  },
+): Promise<NotifyDepositResponse> => {
+  return notifyDeposit({
+    requestId,
+    transactionHash,
+    blockNumber,
+    transferType: TransferType.TRANSFER_WITH_AUTHORIZATION,
+    signedData: {
+      from: signedAuthorization.from,
+      to: signedAuthorization.to,
+      value: signedAuthorization.value.toString(),
+      validAfter: signedAuthorization.validAfter.toString(),
+      validBefore: signedAuthorization.validBefore.toString(),
+      nonce: signedAuthorization.nonce,
+      v: signedAuthorization.v,
+      r: signedAuthorization.r,
+      s: signedAuthorization.s,
+    },
+  });
 };
 

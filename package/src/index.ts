@@ -72,12 +72,25 @@ import {
 import { getRequiredState } from './get-required-data';
 import { getRequiredAvailableModules } from './utils/constants';
 import { createOrchestrationData } from './utils/create-orchestration-data';
-import { deposit, depositFromOrchestrationData } from './utils/deposit';
+import {
+  deposit,
+  depositFromOrchestrationData,
+  depositGasless,
+  depositGaslessFromOrchestrationData,
+} from './utils/deposit';
 import {
   notifyDeposit,
+  notifyDepositGasless,
   getOrchestrationStatus,
   pollOrchestrationStatus,
+  TransferType,
 } from './utils/orchestration-utils';
+import {
+  signTransferWithAuthorization,
+  createTransferAuthorizationMessage,
+  generateNonce,
+  getEIP3009Domain,
+} from './utils/eip3009';
 import {
   transferToOrchestrationAccount,
 } from './utils/orchestration-workflow';
@@ -99,13 +112,20 @@ import {
   type ModuleBuilderConfig,
 } from './utils/module-builder-api';
 import type { OrchestrationData, CurrentState, RequiredState } from './types/orchestration-data';
-import type { DepositResult } from './utils/deposit';
+import type { DepositResult, GaslessDepositResult } from './utils/deposit';
 import type {
   NotifyDepositParams,
   NotifyDepositResponse,
   OrchestrationStatus,
   PollOrchestrationStatusOptions,
+  SignedTransferAuthorizationData,
 } from './utils/orchestration-utils';
+import type {
+  TransferAuthorizationMessage,
+  TransferAuthorizationSignature,
+  SignedTransferAuthorization,
+  EIP3009Domain,
+} from './utils/eip3009';
 
 export const createStealthAddress = async ({
   username,
@@ -209,7 +229,10 @@ export {
   createOrchestrationData,
   deposit,
   depositFromOrchestrationData,
+  depositGasless,
+  depositGaslessFromOrchestrationData,
   notifyDeposit,
+  notifyDepositGasless,
   getOrchestrationStatus,
   pollOrchestrationStatus,
   transferToOrchestrationAccount,
@@ -220,6 +243,12 @@ export {
   buildAutoBridgeModule,
   buildModulesBatch,
   validateModule,
+  // EIP-3009 gasless transfer utilities
+  signTransferWithAuthorization,
+  createTransferAuthorizationMessage,
+  generateNonce,
+  getEIP3009Domain,
+  TransferType,
   // Registration prep (no network)
   generatePrivacyKeys,
   buildEnsData,
@@ -261,10 +290,16 @@ export type {
   CurrentState,
   RequiredState,
   DepositResult,
+  GaslessDepositResult,
   NotifyDepositParams,
   NotifyDepositResponse,
   OrchestrationStatus,
   PollOrchestrationStatusOptions,
+  SignedTransferAuthorizationData,
+  TransferAuthorizationMessage,
+  TransferAuthorizationSignature,
+  SignedTransferAuthorization,
+  EIP3009Domain,
   AutoEarnConfig,
   AutoEarnParams,
   AutoSwapParams,

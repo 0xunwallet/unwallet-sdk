@@ -17,6 +17,7 @@
     "test:orchestration-workflow": "node --loader ts-node/esm -r dotenv/config src/test-orchestration-workflow.ts",
     "test:orchestration-workflow-simple": "node --loader ts-node/esm -r dotenv/config src/test-orchestration-workflow-simple.ts",
     "test:deposit": "node --loader ts-node/esm -r dotenv/config src/test-deposit.ts",
+    "test:gasless-deposit-eip3009": "node --loader ts-node/esm -r dotenv/config src/test-gasless-deposit-eip3009.ts",
     "test:get-api-key-with-modules": "node --loader ts-node/esm -r dotenv/config src/test-get-api-key-with-modules.ts",
     "prepare:curl": "node --loader ts-node/esm -r dotenv/config src/scripts/prepare-curl.ts",
     "test:all": "node --loader ts-node/esm -r dotenv/config src/test.ts",
