@@ -12,6 +12,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -92,20 +94,29 @@ jobs:
           CURRENT_VERSION=$(node -p "require('./package.json').version")
 
           # Check if this version already exists on npm
+          # If package doesn't exist yet, npm view will return 404, which is fine for first publish
           if npm view unwallet@$CURRENT_VERSION version > /dev/null 2>&1; then
             echo "Version $CURRENT_VERSION already exists on npm"
             echo "should-publish=false" >> $GITHUB_OUTPUT
           else
+            echo "Version $CURRENT_VERSION does not exist on npm (or package doesn't exist yet)"
             echo "should-publish=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Verify npm authentication
+        if: steps.publish-check.outputs.should-publish == 'true'
+        run: |
+          cd package
+          echo "Verifying npm authentication..."
+          npm whoami || echo "Warning: npm whoami failed - check NPM_TOKEN secret"
+          echo "Package name: $(node -p "require('./package.json').name")"
+          echo "Package version: $(node -p "require('./package.json').version")"
 
       - name: Publish to npm
         if: steps.publish-check.outputs.should-publish == 'true'
         run: |
           cd package
-          npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm publish --access public
 
       - name: Create Git tag and push changes
         if: steps.publish-check.outputs.should-publish == 'true'
