@@ -54,11 +54,18 @@ export const createOrchestrationData = async (
           : '0x0000000000000000000000000000000000000000';
     }
 
+    // Convert chainId to number - currentState.chainId can be string or number
+    // but API expects number for consistency
+    const sourceChainId = typeof currentState.chainId === 'string' 
+      ? parseInt(currentState.chainId) 
+      : currentState.chainId;
+    const destChainId = parseInt(requiredState.chainId);
+    
     // Prepare the API request payload
     const apiRequestPayload = {
       currentState: [
         {
-          chainId: currentState.chainId,
+          chainId: sourceChainId, // Ensure it's a number
           tokenAddress: currentState.tokenAddress,
           amount: currentState.tokenAmount,
         },
@@ -66,7 +73,7 @@ export const createOrchestrationData = async (
       requiredStateData: [
         {
           moduleAddress,
-          chainId: parseInt(requiredState.chainId),
+          chainId: destChainId, // Already a number
           encodedData: encodedData || '0x',
         },
       ],
