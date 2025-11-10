@@ -207,6 +207,7 @@ async function testGaslessDepositFlow(
     const encodedData = encodeAutoEarnModuleData([autoEarnConfig]);
     console.log(`✅ Encoded AutoEarn config for chain ${autoEarnConfig.chainId}`);
 
+    
     const currentState: CurrentState = {
       chainId: String(sourceNetwork.chainId) as any,
       tokenAddress: sourceNetwork.contracts.usdcToken,
