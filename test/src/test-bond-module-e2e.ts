@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * End-to-End Test for BondModule Installation
+ * End-to-End Test for BondModule Installation - Using SDK
  * 
  * Tests all 4 scenarios:
  * 1. Base Sepolia → Base Sepolia (same chain)
@@ -11,18 +11,24 @@
  * 
  * For each scenario:
  * - Generates a random user account
- * - Creates orchestration request with BondModule
- * - Sends USDC from TEST_PRIVATE_KEY account to random account
- * - Notifies server to trigger deployment
+ * - Creates orchestration request with BondModule using SDK
+ * - Sends USDC from TEST_PRIVATE_KEY account to source account (always)
+ * - Notifies server to trigger deployment using SDK
  * - Verifies account deployment
  * 
+ * Key Features:
+ * - Uses SDK functions for all operations
+ * - Uses createBondModuleConfig and encodeBondModuleData from SDK
+ * - Uses createOrchestrationData, deposit, notifyDeposit, pollOrchestrationStatus
+ * - Always sends funds to source account address
+ * 
  * Prerequisites:
- * - Server must be running: bun run src/index.ts
+ * - Server must be running or use production server
  * - TEST_PRIVATE_KEY environment variable must be set (account with USDC and ETH on both chains)
  * - Account must have USDC on both Base Sepolia and Arbitrum Sepolia
  * - Account must have ETH on both chains for gas
  * 
- * Usage: bun run scripts/test-bond-module-e2e.ts
+ * Usage: cd test && bun run src/test-bond-module-e2e.ts
  */
 
 import {
@@ -33,21 +39,23 @@ import {
   http,
   parseUnits,
   formatUnits,
-  encodeAbiParameters,
-  keccak256,
-  toHex,
 } from 'viem'
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts'
 import { arbitrumSepolia, baseSepolia } from 'viem/chains'
-import * as fs from 'fs'
-import * as path from 'path'
+import {
+  createOrchestrationData,
+  notifyDeposit,
+  pollOrchestrationStatus,
+  getRequiredState,
+  encodeBondModuleData,
+  createBondModuleConfig,
+  deposit,
+} from 'unwallet'
+import type { CurrentState, OrchestrationStatus } from 'unwallet'
+import dotenv from 'dotenv'
 
 // Load environment variables
-import 'dotenv/config'
-
-// Load deployment data
-const deploymentDataPath = path.join(__dirname, '../src/deployments/deployments.json')
-const deploymentData = JSON.parse(fs.readFileSync(deploymentDataPath, 'utf8'))
+dotenv.config()
 
 // Network configurations
 const NETWORKS = {
@@ -57,8 +65,7 @@ const NETWORKS = {
     chain: baseSepolia,
     rpcUrl: process.env.BASE_SEPOLIA_RPC || 'https://sepolia.base.org',
     contracts: {
-      bondModule: (deploymentData.networks?.baseSepolia?.modules?.bondModule?.address || '0xd68229d1e47ad39156766d71cde1787b64905dc5') as Address,
-      usdcToken: deploymentData.networks.baseSepolia.externalIntegrations.usdcToken as Address,
+      usdcToken: '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address,
     }
   },
   arbitrumSepolia: {
@@ -67,17 +74,15 @@ const NETWORKS = {
     chain: arbitrumSepolia,
     rpcUrl: process.env.ARBITRUM_SEPOLIA_RPC || 'https://sepolia-rollup.arbitrum.io/rpc',
     contracts: {
-      bondModule: (deploymentData.networks?.arbitrumSepolia?.modules?.bondModule?.address || '0x2e56ca0a3212e1ebef0d7e33d7c33be55b50259d') as Address,
-      usdcToken: deploymentData.networks.arbitrumSepolia.externalIntegrations.usdcToken as Address,
+      usdcToken: '0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d' as Address,
     }
   }
 }
 
-// API Configuration
-const API_URL = process.env.API_URL || 'https://tee.unwallet.io'
+// Test configuration
 const TEST_CONFIG = {
-  apiUrl: API_URL,
   bridgeAmount: parseUnits('0.05', 6), // 0.05 USDC (6 decimals) - small amount for testing
+  apiUrl: process.env.API_URL || process.env.TEST_SERVER_URL || process.env.SERVER_URL || 'https://tee.unwallet.io',
   apiKey: process.env.API_KEY || 'test-api-key',
 }
 
@@ -148,7 +153,7 @@ const TEST_SCENARIOS: TestScenario[] = [
 
 async function checkServerStatus(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_URL}/api/v1/orchestration/chains`)
+    const response = await fetch(`${TEST_CONFIG.apiUrl}/api/v1/orchestration/chains`)
     return response.ok
   } catch {
     return false
@@ -157,73 +162,98 @@ async function checkServerStatus(): Promise<boolean> {
 
 async function createOrchestrationRequest(
   scenario: TestScenario,
-  userAddress: Address
+  userAddress: Address,
+  destPublicClient: any
 ): Promise<any> {
   console.log(`\n📤 Creating orchestration request for: ${scenario.name}`)
   
   const sourceNetwork = NETWORKS[scenario.sourceChain]
   const destNetwork = NETWORKS[scenario.destinationChain]
   
-  // Encode BondModule initData: (address[] tokenAddresses, uint256[] totalAmounts)
-  const tokenAddresses = [destNetwork.contracts.usdcToken]
-  const totalAmounts = [TEST_CONFIG.bridgeAmount]
+  // Get required state using SDK - MUST use destination chain's public client
+  console.log(`\n📊 Getting required state for BondModule on ${destNetwork.name} (chainId: ${scenario.destinationChainId})...`)
   
-  const bondModuleInitData = encodeAbiParameters(
-    [
-      { type: 'address[]', name: 'tokenAddresses' },
-      { type: 'uint256[]', name: 'totalAmounts' }
-    ],
-    [tokenAddresses, totalAmounts]
+  // First, verify the BondModule contract exists on the destination chain
+  let requiredState
+  try {
+    requiredState = await getRequiredState({
+      sourceChainId: String(scenario.destinationChainId) as any,
+      moduleName: 'BOND',
+      publicClient: destPublicClient, // Use destination chain's public client
+    })
+  } catch (error: any) {
+    const errorMsg = error?.message || error?.toString() || 'Unknown error'
+    if (errorMsg.includes('getConfigInputTypeData') || errorMsg.includes('returned no data') || errorMsg.includes('reverted')) {
+      throw new Error(
+        `❌ BondModule does not exist or is not accessible on ${destNetwork.name} (chainId: ${scenario.destinationChainId}). ` +
+        `Please ensure the BondModule is deployed on this chain before running the test. ` +
+        `Error: ${errorMsg}`
+      )
+    }
+    throw error
+  }
+  
+  // Validate module address is not zero
+  if (!requiredState.moduleAddress || requiredState.moduleAddress === '0x0000000000000000000000000000000000000000') {
+    throw new Error(
+      `❌ Invalid BondModule address on ${destNetwork.name} (chainId: ${scenario.destinationChainId}). ` +
+      `Module address is zero address.`
+    )
+  }
+  
+  // Verify the contract exists at the module address
+  const contractCode = await destPublicClient.getCode({ address: requiredState.moduleAddress as Address })
+  if (!contractCode || contractCode === '0x') {
+    throw new Error(
+      `❌ BondModule contract does not exist at address ${requiredState.moduleAddress} on ${destNetwork.name} (chainId: ${scenario.destinationChainId}). ` +
+      `Please ensure the BondModule is deployed at this address.`
+    )
+  }
+  
+  console.log(`✅ Module Address: ${requiredState.moduleAddress}`)
+  console.log(`   Chain ID: ${requiredState.chainId}`)
+  console.log(`   Contract verified: ${contractCode.length} bytes of code`)
+  
+  // Create BondModule config using SDK
+  console.log('\n🔧 Creating BondModule configuration using SDK...')
+  const bondConfig = createBondModuleConfig(
+    [destNetwork.contracts.usdcToken], // Token addresses to bond
+    [TEST_CONFIG.bridgeAmount] // Total amounts for each token
   )
+  console.log(`✅ Created BondModule config:`)
+  console.log(`   Token Addresses: ${bondConfig.tokenAddresses.join(', ')}`)
+  console.log(`   Total Amounts: ${bondConfig.totalAmounts.map((a) => formatUnits(a, 6)).join(', ')} USDC`)
   
-  const orchestrationRequest = {
-    currentState: [
-      {
-        chainId: scenario.sourceChainId,
-        tokenAddress: sourceNetwork.contracts.usdcToken,
-        amount: TEST_CONFIG.bridgeAmount.toString(),
-      }
-    ],
-    requiredStateData: [
-      {
-        chainId: scenario.destinationChainId,
-        moduleAddress: destNetwork.contracts.bondModule,
-        encodedData: bondModuleInitData, // Direct initData for BondModule
-      }
-    ],
-    userAddress: userAddress,
-    apiKey: TEST_CONFIG.apiKey,
+  // Encode BondModule data using SDK
+  console.log('\n🔧 Encoding BondModule data using SDK...')
+  const encodedData = encodeBondModuleData(bondConfig)
+  console.log(`✅ Encoded BondModule data: ${encodedData.substring(0, 66)}...`)
+  
+  const currentState: CurrentState = {
+    chainId: String(scenario.sourceChainId) as any,
+    tokenAddress: sourceNetwork.contracts.usdcToken,
+    tokenAmount: TEST_CONFIG.bridgeAmount.toString(),
+    ownerAddress: userAddress,
   }
   
   console.log(`   Source Chain: ${scenario.sourceChainId} (${scenario.sourceChain})`)
   console.log(`   Destination Chain: ${scenario.destinationChainId} (${scenario.destinationChain})`)
-  console.log(`   BondModule Address: ${destNetwork.contracts.bondModule}`)
-  console.log(`   Token Addresses: ${tokenAddresses.join(', ')}`)
-  console.log(`   Total Amounts: ${totalAmounts.map(a => formatUnits(a, 6)).join(', ')} USDC`)
   
-  const response = await fetch(`${API_URL}/api/v1/orchestration/create`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(orchestrationRequest),
-  })
+  // Create orchestration data using SDK
+  console.log('\n📤 Creating orchestration request using SDK...')
+  const orchestrationData = await createOrchestrationData(
+    currentState,
+    requiredState,
+    userAddress,
+    TEST_CONFIG.apiKey,
+    encodedData as Hex
+  )
   
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Orchestration request failed: ${response.status} - ${error}`)
-  }
-  
-  const result = await response.json() as any
-  if (!result.success || !result.data) {
-    throw new Error(`Orchestration request failed: ${result.error || 'Unknown error'}`)
-  }
-  const data = result.data
   console.log(`✅ Orchestration created successfully`)
-  console.log(`   Request ID: ${data.requestId}`)
-  console.log(`   Source Account: ${data.accountAddressOnSourceChain}`)
-  console.log(`   Destination Account: ${data.accountAddressOnDestinationChain}`)
-  return data
+  console.log(`   Request ID: ${orchestrationData.requestId}`)
+  console.log(`   Source Account: ${orchestrationData.accountAddressOnSourceChain}`)
+  console.log(`   Destination Account: ${orchestrationData.accountAddressOnDestinationChain}`)
+  return orchestrationData
 }
 
 async function sendUSDCToAccount(
@@ -235,7 +265,7 @@ async function sendUSDCToAccount(
 ): Promise<string> {
   const network = NETWORKS[sourceChain]
   
-  console.log(`\n💰 Sending USDC to account`)
+  console.log(`\n💰 Sending USDC to account using SDK`)
   console.log(`   Recipient: ${recipient}`)
   console.log(`   Amount: ${formatUnits(amount, 6)} USDC`)
   console.log(`   Token: ${network.contracts.usdcToken}`)
@@ -250,19 +280,24 @@ async function sendUSDCToAccount(
   
   console.log(`   Balance before: ${formatUnits(balanceBefore, 6)} USDC`)
   
-  // Send USDC
-  const txHash = await walletClient.writeContract({
-    address: network.contracts.usdcToken,
-    abi: ERC20_ABI,
-    functionName: 'transfer',
-    args: [recipient, amount],
-  })
+  // Use SDK deposit function
+  const depositResult = await deposit(
+    recipient,
+    network.contracts.usdcToken,
+    amount,
+    walletClient,
+    publicClient
+  )
   
-  console.log(`   Transaction hash: ${txHash}`)
+  if (!depositResult.success || !depositResult.txHash) {
+    throw new Error(`Deposit failed: ${depositResult.error}`)
+  }
+  
+  console.log(`   Transaction hash: ${depositResult.txHash}`)
   
   // Wait for confirmation
   const receipt = await publicClient.waitForTransactionReceipt({
-    hash: txHash,
+    hash: depositResult.txHash as `0x${string}`,
     confirmations: 2,
   })
   
@@ -277,41 +312,25 @@ async function sendUSDCToAccount(
   console.log(`   Balance after: ${formatUnits(balanceAfter, 6)} USDC`)
   console.log(`✅ USDC transfer confirmed`)
   
-  return txHash
+  return depositResult.txHash
 }
 
 async function notifyServer(
   requestId: Hex,
-  transferType: number = 0,
-  transactionHash?: Hex
+  transactionHash: Hex,
+  blockNumber: string
 ): Promise<void> {
-  console.log(`\n📢 Notifying server`)
+  console.log(`\n📢 Notifying server using SDK`)
   console.log(`   Request ID: ${requestId}`)
-  console.log(`   Transfer Type: ${transferType} (${transferType === 0 ? 'NORMAL' : 'EIP-3009'})`)
-  const notificationPayload: any = {
+  
+  // Use SDK notifyDeposit function
+  await notifyDeposit({
     requestId: requestId,
-    transferType: transferType,
-  }
-  if (transactionHash) {
-    notificationPayload.transactionHash = transactionHash
-  }
-  const response = await fetch(`${API_URL}/api/v1/notifications/deposit`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(notificationPayload),
+    transactionHash: transactionHash,
+    blockNumber: blockNumber,
   })
-  if (!response.ok) {
-    const error = await response.text()
-    throw new Error(`Notification failed: ${response.status} - ${error}`)
-  }
-  const result = await response.json() as any
-  if (!result.success) {
-    throw new Error(`Notification failed: ${result.error || 'Unknown error'}`)
-  }
+  
   console.log(`✅ Server notified`)
-  console.log(`   Message: ${result.message || 'Notification received'}`)
 }
 
 async function verifyAccountDeployment(
@@ -336,18 +355,7 @@ async function verifyAccountDeployment(
   return isDeployed
 }
 
-async function getOrchestrationStatus(requestId: Hex): Promise<any> {
-  const response = await fetch(`${API_URL}/api/v1/orchestration/status/${requestId}`)
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Failed to get status: ${response.status} - ${errorText}`)
-  }
-  const result = await response.json() as any
-  if (!result.success || !result.data) {
-    throw new Error(`Failed to get status: ${result.error || 'Unknown error'}`)
-  }
-  return result.data
-}
+// Removed - using pollOrchestrationStatus from SDK instead
 
 async function checkBalances(
   scenario: TestScenario,
@@ -394,47 +402,83 @@ async function testScenario(
       transport: http(NETWORKS[scenario.destinationChain].rpcUrl),
     })
     
-    // Step 1: Create orchestration request
+    // Step 1: Create orchestration request using SDK
+    // Pass destPublicClient because getRequiredState needs to query the destination chain
     const orchestrationData = await createOrchestrationRequest(
       scenario,
-      testAccount.address
+      testAccount.address,
+      destPublicClient
     )
     
     const sourceAccountAddress = orchestrationData.accountAddressOnSourceChain as Address
     const destAccountAddress = orchestrationData.accountAddressOnDestinationChain as Address
     const requestId = orchestrationData.requestId as Hex
-    // Step 2: Send USDC to the correct account
-    // For same-chain: send to destination smart account (will be deployed)
-    // For cross-chain: send to source account
-    const recipientAddress = scenario.isCrossChain ? sourceAccountAddress : destAccountAddress
+    
+    // Step 2: ALWAYS send USDC to source account address
     console.log(`\n💡 Transfer strategy:`)
-    if (scenario.isCrossChain) {
-      console.log(`   Cross-chain: Send to source account → Bridge to destination`)
-      console.log(`   Recipient: ${sourceAccountAddress} (source)`)
-    } else {
-      console.log(`   Same-chain: Send directly to destination smart account`)
-      console.log(`   Recipient: ${destAccountAddress} (destination)`)
-    }
+    console.log(`   Always send to source account address: ${sourceAccountAddress}`)
+    
     const txHash = await sendUSDCToAccount(
       scenario.sourceChain,
-      recipientAddress,
+      sourceAccountAddress, // Always send to source account
       TEST_CONFIG.bridgeAmount,
       sourceWalletClient,
       sourcePublicClient
     )
     
-    // Step 3: Notify server
-    await notifyServer(requestId, 0, txHash as Hex)
+    // Get transaction receipt for block number
+    const receipt = await sourcePublicClient.waitForTransactionReceipt({
+      hash: txHash as `0x${string}`,
+      confirmations: 2,
+    })
+    
+    // Step 3: Notify server using SDK
+    await notifyServer(requestId, receipt.transactionHash, receipt.blockNumber.toString())
 
-    // Step 4: Wait based on scenario type (longer for cross-chain)
-    const waitTime = scenario.isCrossChain ? 30000 : 15000 // 30s for cross-chain, 15s for same-chain
-    console.log(`\n⏳ Waiting ${waitTime / 1000}s for ${scenario.isCrossChain ? 'cross-chain' : 'same-chain'} orchestration to process...`)
-    await new Promise(resolve => setTimeout(resolve, waitTime))
-
-    // Step 5: Check orchestration status
-    const status = await getOrchestrationStatus(requestId)
+    // Step 4: Poll orchestration status using SDK
+    console.log(`\n⏳ Polling orchestration status using SDK...`)
+    let finalStatus: OrchestrationStatus | null = null
+    let completed = false
+    
+    try {
+      const polledStatus = await pollOrchestrationStatus({
+        requestId: requestId,
+        interval: 3000,
+        maxAttempts: 40,
+        onStatusUpdate: (status: OrchestrationStatus) => {
+          console.log(`\n[Status Update] ${status.status}`)
+          if (status.updated_at || status.created_at) {
+            console.log(
+              `   Updated: ${new Date(status.updated_at || status.created_at || Date.now()).toLocaleString()}`
+            )
+          }
+          if (status.error_message) {
+            console.log(`   Error: ${status.error_message}`)
+          }
+        },
+        onComplete: (status: OrchestrationStatus) => {
+          console.log('\n🎉 Orchestration completed successfully!')
+          console.log(`   Final Status: ${status.status}`)
+          completed = true
+          finalStatus = status
+        },
+        onError: (error: Error) => {
+          console.log(`\n❌ Orchestration error: ${error.message}`)
+        },
+      })
+      if (!finalStatus) {
+        finalStatus = polledStatus
+        completed = polledStatus.status === 'COMPLETED' || polledStatus.status === 'FAILED'
+      }
+    } catch (error) {
+      console.log(`\n⚠️  Status polling completed or timed out`)
+      if (error instanceof Error) {
+        console.log(`   ${error.message}`)
+      }
+    }
+    
     console.log(`\n📊 Orchestration Status:`)
-    console.log(`   Status: ${status.status || 'UNKNOWN'}`)
+    console.log(`   Status: ${finalStatus?.status || 'UNKNOWN'}`)
 
     // Step 6: Verify account deployments
     console.log(`\n🔍 Verifying deployments...`)
@@ -484,9 +528,9 @@ async function testScenario(
 }
 
 async function main() {
-  console.log('🚀 BondModule End-to-End Test Suite')
+  console.log('🚀 BondModule End-to-End Test Suite (Using SDK)')
   console.log('='.repeat(80))
-  console.log(`API URL: ${API_URL}`)
+  console.log(`API URL: ${TEST_CONFIG.apiUrl}`)
   console.log(`Test Amount: ${formatUnits(TEST_CONFIG.bridgeAmount, 6)} USDC`)
   
   // Check server status
