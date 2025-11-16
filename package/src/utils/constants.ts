@@ -23,6 +23,7 @@ type ModuleConfig = {
   autoBridgeContractAddress: Address;
 };
 
+
 export const BOND_ABI = [
   {
     name: 'getConfigInputTypeData',
