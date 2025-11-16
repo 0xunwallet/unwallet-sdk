@@ -6,7 +6,7 @@ export const BACKEND_URL = 'https://unwallet-production.up.railway.app';
 
 export const FACILITATOR_URL = 'https://arbsep.facilitator.unwallet.me';
 
-export const SERVER_URL_ENS = 'https://tee.unwallet.io';
+export const SERVER_URL_ENS = 'https://tee.wall8.xyz';
 // export const SERVER_URL_ENS = 'http://localhost:3000';
 
 // AAVE Pool Addresses (vault addresses for all modules)
@@ -42,7 +42,7 @@ export const BOND_ABI = [
 export const MODULE_DATA = {
   [baseSepolia.id as SupportedChain]: {
     abi: BOND_ABI,
-    bondContractAddress: '0x6e1fAc6e36f01615ef0c0898Bf6c5F260Bf2609a', // autoEarn on Base Sepolia
+    bondContractAddress: '0xd68229d1e47ad39156766d71cde1787b64905dc5', // Bond module on Base Sepolia
     autoEarnContractAddress: '0x6e1fAc6e36f01615ef0c0898Bf6c5F260Bf2609a',
     autoSwapContractAddress: '0x564B1354Af4D3EA51eE3a9eFaD608E9aa78d3905',
     autoBridgeContractAddress: '0xe8Da54c7056680FF1b7FF6E9dfD0721dDcAd3F14',
@@ -51,7 +51,7 @@ export const MODULE_DATA = {
   },
   [arbitrumSepolia.id as SupportedChain]: {
     abi: BOND_ABI,
-    bondContractAddress: '0x748Cb019ffF904482e8518124F2BbFF0Ea7Ec7d6',
+    bondContractAddress: '0x2e56ca0a3212e1ebef0d7e33d7c33be55b50259d', // Bond module on Arbitrum Sepolia
     autoEarnContractAddress: '0x42CF1b746F96D6cc59e84F87d26Ea64D3fbCa3a0', // Correct AutoEarn module address
     autoSwapContractAddress: '0x537a0aB5A0172E69EC824cD1048A57eca95c696B',
     autoBridgeContractAddress: '0xDdAd6d1084fF9e8CaBf579358A95666Bf5515F51',

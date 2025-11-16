@@ -94,7 +94,7 @@ const TEST_CONFIG = {
   apiUrl:
     process.env.TEST_SERVER_URL ||
     process.env.SERVER_URL ||
-    'https://tee.unwallet.io',
+    'https://tee.wall8.xyz',
   // API key for orchestration
   apiKey: process.env.API_KEY || 'test-api-bond-module',
 };
