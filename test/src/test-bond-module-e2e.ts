@@ -82,7 +82,7 @@ const NETWORKS = {
 // Test configuration
 const TEST_CONFIG = {
   bridgeAmount: parseUnits('0.05', 6), // 0.05 USDC (6 decimals) - small amount for testing
-  apiUrl: process.env.API_URL || process.env.TEST_SERVER_URL || process.env.SERVER_URL || 'https://tee.unwallet.io',
+  apiUrl: process.env.API_URL || process.env.TEST_SERVER_URL || process.env.SERVER_URL || 'https://tee.wall8.xyz',
   apiKey: process.env.API_KEY || 'test-api-key',
 }
 
