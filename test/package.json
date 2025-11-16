@@ -19,6 +19,8 @@
     "test:deposit": "node --loader ts-node/esm -r dotenv/config src/test-deposit.ts",
     "test:gasless-deposit-eip3009": "node --loader ts-node/esm -r dotenv/config src/test-gasless-deposit-eip3009.ts",
     "test:same-chain": "node --loader ts-node/esm -r dotenv/config src/test-same-chain.ts",
+    "test:bond-module-sdk": "bun run src/test-bond-module-sdk.ts",
+    "test:bond-module-sdk:node": "node --loader ts-node/esm -r dotenv/config src/test-bond-module-sdk.ts",
     "test:get-api-key-with-modules": "node --loader ts-node/esm -r dotenv/config src/test-get-api-key-with-modules.ts",
     "prepare:curl": "node --loader ts-node/esm -r dotenv/config src/scripts/prepare-curl.ts",
     "test:all": "node --loader ts-node/esm -r dotenv/config src/test.ts",
