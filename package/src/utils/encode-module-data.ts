@@ -94,3 +94,90 @@ export const createAutoEarnConfig = (
   };
 };
 
+/**
+ * BondModule configuration input
+ */
+export interface BondModuleConfig {
+  tokenAddresses: Address[];
+  totalAmounts: bigint[];
+}
+
+/**
+ * Encodes BondModule configuration data
+ * 
+ * The BondModule expects initData encoded as:
+ * - address[] tokenAddresses: Array of token addresses to bond
+ * - uint256[] totalAmounts: Array of total amounts for each token (must match tokenAddresses length)
+ * 
+ * @param config - BondModule configuration with token addresses and amounts
+ * @returns Encoded hex string ready for use in orchestration
+ * 
+ * @example
+ * ```typescript
+ * const config = createBondModuleConfig(
+ *   ['0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d'], // USDC address
+ *   [parseUnits('0.05', 6)] // 0.05 USDC (6 decimals)
+ * );
+ * const encodedData = encodeBondModuleData(config);
+ * 
+ * const orchestrationData = await createOrchestrationData(
+ *   currentState,
+ *   requiredState,
+ *   userAddress,
+ *   apiKey,
+ *   encodedData
+ * );
+ * ```
+ */
+export const encodeBondModuleData = (config: BondModuleConfig): Hex => {
+  // Validate that arrays have the same length
+  if (config.tokenAddresses.length !== config.totalAmounts.length) {
+    throw new Error(
+      `Token addresses and amounts arrays must have the same length. Got ${config.tokenAddresses.length} addresses and ${config.totalAmounts.length} amounts`
+    );
+  }
+
+  // Encode the BondModule initData: (address[] tokenAddresses, uint256[] totalAmounts)
+  const encodedData = encodeAbiParameters(
+    [
+      { type: 'address[]', name: 'tokenAddresses' },
+      { type: 'uint256[]', name: 'totalAmounts' },
+    ],
+    [config.tokenAddresses, config.totalAmounts],
+  );
+
+  return encodedData as Hex;
+};
+
+/**
+ * Helper to create BondModule config
+ * 
+ * @param tokenAddresses - Array of token addresses to bond (e.g., USDC addresses)
+ * @param totalAmounts - Array of total amounts for each token (must match tokenAddresses length)
+ * @returns BondModuleConfig ready for encoding
+ * 
+ * @example
+ * ```typescript
+ * const config = createBondModuleConfig(
+ *   ['0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d'], // USDC on Arbitrum Sepolia
+ *   [parseUnits('0.05', 6)] // 0.05 USDC
+ * );
+ * const encodedData = encodeBondModuleData(config);
+ * ```
+ */
+export const createBondModuleConfig = (
+  tokenAddresses: Address[],
+  totalAmounts: bigint[],
+): BondModuleConfig => {
+  if (tokenAddresses.length !== totalAmounts.length) {
+    throw new Error(
+      `Token addresses and amounts arrays must have the same length. Got ${tokenAddresses.length} addresses and ${totalAmounts.length} amounts`
+    );
+  }
+
+  return {
+    tokenAddresses,
+    totalAmounts,
+  };
+};
+

@@ -98,6 +98,9 @@ import {
   encodeAutoEarnModuleData,
   createAutoEarnConfig,
   type AutoEarnConfig,
+  encodeBondModuleData,
+  createBondModuleConfig,
+  type BondModuleConfig,
 } from './utils/encode-module-data';
 import {
   buildAutoEarnModule,
@@ -238,6 +241,8 @@ export {
   transferToOrchestrationAccount,
   encodeAutoEarnModuleData,
   createAutoEarnConfig,
+  encodeBondModuleData,
+  createBondModuleConfig,
   buildAutoEarnModule,
   buildAutoSwapModule,
   buildAutoBridgeModule,
@@ -301,6 +306,7 @@ export type {
   SignedTransferAuthorization,
   EIP3009Domain,
   AutoEarnConfig,
+  BondModuleConfig,
   AutoEarnParams,
   AutoSwapParams,
   AutoBridgeParams,
